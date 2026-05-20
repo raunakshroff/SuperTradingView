@@ -14,6 +14,7 @@ env/
 
 # Local config
 .claude/
+.superpowers/
 .env
 *.local
 
