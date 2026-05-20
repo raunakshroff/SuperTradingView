@@ -28,6 +28,14 @@ const DEFAULT_PANES = [
 const LS_COUNT = "stv.chartCount";
 const LS_PANES = "stv.panes";
 
+// Returns the base indicator def-id from an instance key.
+// "sma"        → "sma"   (single instance uses bare id for backward compat)
+// "sma~123456" → "sma"   (additional instances append ~<timestamp>)
+function defIdOf(key) {
+  const i = key.indexOf("~");
+  return i < 0 ? key : key.slice(0, i);
+}
+
 // --- Symbol registry --------------------------------------------------------
 
 const SYMBOLS = { byKey: new Map(), all: [], timeframes: [] };
@@ -192,16 +200,17 @@ class Pane {
 
     this._buildChart();
     // Build series objects for any persisted indicators before history loads.
-    // Overlays first (pane 0), then sub-panes in DEFS order (panes 1..N).
+    // Overlays first (pane 0) in DEFS × instance order, then sub-panes.
     for (const def of Indicators.DEFS) {
-      if (def.overlay && this.state.indicators[def.id]) this._buildIndicator(def.id);
+      if (!def.overlay) continue;
+      for (const key of Object.keys(this.state.indicators).filter((k) => defIdOf(k) === def.id).sort()) {
+        this._buildIndicator(key);
+      }
     }
     let paneIdx = 1;
-    for (const def of Indicators.DEFS) {
-      if (!def.overlay && this.state.indicators[def.id]) {
-        this._buildIndicator(def.id, paneIdx);
-        paneIdx++;
-      }
+    for (const key of this._activeSubPanes()) {
+      this._buildIndicator(key, paneIdx);
+      paneIdx++;
     }
     this._applyPaneSizing();
     this._refreshLegends();
@@ -398,34 +407,43 @@ class Pane {
 
   // --- Indicators ---------------------------------------------------------
 
-  setIndicator(id, params) {
-    const def = Indicators.DEFS.find((d) => d.id === id);
+  setIndicator(key, params) {
+    const def = Indicators.DEFS.find((d) => d.id === defIdOf(key));
     if (!def) return;
-    const wasNew = !this.state.indicators[id];
-    this.state.indicators[id] = { ...params };
+    const wasNew = !this.state.indicators[key];
+    this.state.indicators[key] = { ...params };
     saveState();
 
     if (def.overlay) {
-      // Overlay lives on the candle pane; just rebuild it.
-      this._buildIndicator(id);
+      this._buildIndicator(key);
     } else if (wasNew) {
-      // New sub-pane indicator inserts a new pane and may shift existing
-      // sub-panes (DEFS order), so rebuild all sub-pane indicators.
       this._rebuildSubPanes();
     } else {
-      // Existing sub-pane: only its params/colors changed, pane stays.
-      this._buildIndicator(id);
+      this._buildIndicator(key);
     }
     this._applyPaneSizing();
     this._refreshLegends();
     this._updateFxButton();
   }
 
-  removeIndicator(id) {
-    const def = Indicators.DEFS.find((d) => d.id === id);
-    delete this.state.indicators[id];
+  // Adds a new instance of the indicator with defId. The first instance uses
+  // the bare defId as its key; additional instances append ~<timestamp>.
+  addIndicatorInstance(defId) {
+    const def = Indicators.DEFS.find((d) => d.id === defId);
+    if (!def) return null;
+    const existing = Object.keys(this.state.indicators).filter((k) => defIdOf(k) === defId);
+    const key = existing.length === 0 ? defId : `${defId}~${Date.now()}`;
+    const params = {};
+    for (const p of def.params) params[p.key] = p.default;
+    this.setIndicator(key, params);
+    return key;
+  }
+
+  removeIndicator(key) {
+    const def = Indicators.DEFS.find((d) => d.id === defIdOf(key));
+    delete this.state.indicators[key];
     saveState();
-    this._tearDownIndicator(id);
+    this._tearDownIndicator(key);
     if (def && !def.overlay) this._rebuildSubPanes();
     this._applyPaneSizing();
     this._refreshLegends();
@@ -440,37 +458,41 @@ class Pane {
   }
 
   _activeSubPanes() {
-    // Keep DEFS order so the sub-pane stack is stable across reloads.
-    return Indicators.DEFS
-      .filter((d) => !d.overlay && this.state.indicators[d.id])
-      .map((d) => d.id);
+    // Return all active sub-pane instance keys in DEFS order, then by key
+    // within each def so the sub-pane stack is stable across reloads.
+    const result = [];
+    for (const def of Indicators.DEFS) {
+      if (def.overlay) continue;
+      const keys = Object.keys(this.state.indicators)
+        .filter((k) => defIdOf(k) === def.id)
+        .sort();
+      result.push(...keys);
+    }
+    return result;
   }
 
-  _paneIndexFor(id) {
-    const def = Indicators.DEFS.find((d) => d.id === id);
+  _paneIndexFor(key) {
+    const def = Indicators.DEFS.find((d) => d.id === defIdOf(key));
     if (!def || def.overlay) return 0;
     const subs = this._activeSubPanes();
-    const idx = subs.indexOf(id);
+    const idx = subs.indexOf(key);
     return idx >= 0 ? idx + 1 : 1;
   }
 
   _rebuildSubPanes() {
-    // Tear down every sub-pane indicator, drop empty panes, then re-add the
-    // currently-enabled sub-pane indicators in DEFS order, one per pane.
-    for (const def of Indicators.DEFS) {
-      if (!def.overlay && this.indicatorViews[def.id]) {
-        this._tearDownIndicator(def.id);
-      }
+    // Tear down all sub-pane instances, remove extra panes, then re-add in
+    // DEFS × instance order so the stack is stable.
+    for (const key of Object.keys(this.indicatorViews)) {
+      const def = Indicators.DEFS.find((d) => d.id === defIdOf(key));
+      if (def && !def.overlay) this._tearDownIndicator(key);
     }
     const panes = this.chart.panes();
     for (let i = panes.length - 1; i >= 1; i--) {
       try { this.chart.removePane(i); } catch (_e) { /* ignore */ }
     }
     let paneIdx = 1;
-    for (const def of Indicators.DEFS) {
-      if (def.overlay) continue;
-      if (!this.state.indicators[def.id]) continue;
-      this._buildIndicator(def.id, paneIdx);
+    for (const key of this._activeSubPanes()) {
+      this._buildIndicator(key, paneIdx);
       paneIdx++;
     }
   }
@@ -510,48 +532,62 @@ class Pane {
     const panes = this.chart.panes();
     if (panes.length === 0) return;
 
-    const attach = (paneIdx, defs) => {
-      if (paneIdx >= panes.length || defs.length === 0) return;
+    const attach = (paneIdx, items) => {
+      if (paneIdx >= panes.length || items.length === 0) return;
       const paneEl = panes[paneIdx].getHTMLElement();
-      if (!paneEl) return;   // pane DOM not ready yet, will refresh on next event
+      if (!paneEl) return;
       const computed = window.getComputedStyle(paneEl).position;
       if (computed === "static") paneEl.style.position = "relative";
       const legend = document.createElement("div");
       legend.className = "pane-legend";
-      for (const def of defs) legend.appendChild(this._makeLegendItem(def));
+      for (const { def, key } of items) legend.appendChild(this._makeLegendItem(def, key));
       paneEl.appendChild(legend);
       this.legendNodes.push(legend);
     };
 
-    // Pane 0: all overlay indicators
-    const overlays = Indicators.DEFS.filter(
-      (d) => d.overlay && this.state.indicators[d.id]
-    );
-    attach(0, overlays);
+    // Pane 0: all overlay indicator instances in DEFS × instance order
+    const overlayItems = [];
+    for (const def of Indicators.DEFS) {
+      if (!def.overlay) continue;
+      const keys = Object.keys(this.state.indicators)
+        .filter((k) => defIdOf(k) === def.id)
+        .sort();
+      for (const key of keys) overlayItems.push({ def, key });
+    }
+    attach(0, overlayItems);
 
-    // Each sub-pane: the indicator that owns it (DEFS order)
-    const subs = Indicators.DEFS.filter(
-      (d) => !d.overlay && this.state.indicators[d.id]
-    );
-    for (let i = 0; i < subs.length; i++) attach(i + 1, [subs[i]]);
+    // Each sub-pane: the instance that owns it
+    const subKeys = this._activeSubPanes();
+    for (let i = 0; i < subKeys.length; i++) {
+      const key = subKeys[i];
+      const def = Indicators.DEFS.find((d) => d.id === defIdOf(key));
+      if (def) attach(i + 1, [{ def, key }]);
+    }
   }
 
-  _legendLabelFor(def) {
-    const params = this.state.indicators[def.id] || {};
+  _legendLabelFor(def, key) {
+    const params = this.state.indicators[key] || {};
     const numericVals = def.params
       .map((p) => params[p.key] ?? p.default)
       .filter((v) => v != null && v !== "");
     const shortName = def.name.split(" — ")[0].split(" (")[0];
-    return numericVals.length > 0
+    const label = numericVals.length > 0
       ? `${shortName} (${numericVals.join(", ")})`
       : shortName;
+    // Append instance number if multiple instances of the same type exist
+    const allKeys = Object.keys(this.state.indicators).filter((k) => defIdOf(k) === def.id).sort();
+    if (allKeys.length > 1) {
+      const n = allKeys.indexOf(key) + 1;
+      return `${label} #${n}`;
+    }
+    return label;
   }
 
-  _makeLegendItem(def) {
+  _makeLegendItem(def, key) {
     const item = document.createElement("div");
     item.className = "legend-item";
 
-    const colors = this._resolveColors(def);
+    const colors = this._resolveColors(def, key);
     const firstColor = Object.values(colors)[0] || "#888";
     const swatch = document.createElement("span");
     swatch.className = "legend-color";
@@ -560,14 +596,14 @@ class Pane {
 
     const labelEl = document.createElement("span");
     labelEl.className = "legend-name";
-    labelEl.textContent = this._legendLabelFor(def);
+    labelEl.textContent = this._legendLabelFor(def, key);
     item.appendChild(labelEl);
 
     const gear = document.createElement("button");
     gear.className = "legend-gear";
     gear.type = "button";
     gear.title = `${def.name} settings`;
-    gear.textContent = "⚙"; // ⚙
+    gear.textContent = "⚙";
     gear.addEventListener("click", (e) => {
       e.stopPropagation();
       openIndicatorsModal(this, def.id);
@@ -578,10 +614,10 @@ class Pane {
     remove.className = "legend-remove";
     remove.type = "button";
     remove.title = "Remove indicator";
-    remove.textContent = "×"; // ×
+    remove.textContent = "×";
     remove.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.removeIndicator(def.id);
+      this.removeIndicator(key);
     });
     item.appendChild(remove);
 
@@ -595,9 +631,10 @@ class Pane {
     delete this.indicatorViews[id];
   }
 
-  _resolveColors(def) {
-    // Merge def defaults with any per-pane user overrides.
-    const overrides = (this.state.indicators[def.id] || {}).colors || {};
+  _resolveColors(def, key) {
+    // Merge def defaults with any per-instance user overrides.
+    const stateKey = key !== undefined ? key : def.id;
+    const overrides = (this.state.indicators[stateKey] || {}).colors || {};
     const out = {};
     for (const slot of def.colors || []) {
       const v = overrides[slot.key];
@@ -606,23 +643,23 @@ class Pane {
     return out;
   }
 
-  _buildIndicator(id, forcedPane) {
-    this._tearDownIndicator(id);
-    const def = Indicators.DEFS.find((d) => d.id === id);
+  _buildIndicator(key, forcedPane) {
+    this._tearDownIndicator(key);
+    const def = Indicators.DEFS.find((d) => d.id === defIdOf(key));
     if (!def) return;
-    const paneIndex = forcedPane !== undefined ? forcedPane : this._paneIndexFor(id);
-    const colors = this._resolveColors(def);
+    const paneIndex = forcedPane !== undefined ? forcedPane : this._paneIndexFor(key);
+    const colors = this._resolveColors(def, key);
     const series = def.build(this.chart, paneIndex, colors);
-    this.indicatorViews[id] = { series, def };
-    this._recomputeIndicator(id);
+    this.indicatorViews[key] = { series, def };
+    this._recomputeIndicator(key);
   }
 
-  _recomputeIndicator(id) {
+  _recomputeIndicator(key) {
     if (this.candles.length === 0) return;
-    const view = this.indicatorViews[id];
+    const view = this.indicatorViews[key];
     if (!view) return;
-    const params = this.state.indicators[id] || {};
-    const colors = this._resolveColors(view.def);
+    const params = this.state.indicators[key] || {};
+    const colors = this._resolveColors(view.def, key);
     const data = view.def.compute(this.candles, params, colors);
     if (data != null) view.def.apply(view.series, data);
   }
@@ -785,8 +822,10 @@ function openIndicatorsModal(pane, focusId) {
   // Auto-focus search so users can type immediately
   requestAnimationFrame(() => modalSearchEl.focus());
   if (focusId) {
+    // focusId may be a bare def-id or an instance key — normalise to def-id
+    const searchId = defIdOf(focusId);
     requestAnimationFrame(() => {
-      const row = modalList.querySelector(`.indicator-row[data-id="${focusId}"]`);
+      const row = modalList.querySelector(`.indicator-row[data-id="${searchId}"]`);
       if (!row) return;
       row.scrollIntoView({ block: "center", behavior: "smooth" });
       row.classList.add("focus-flash");
@@ -827,7 +866,7 @@ function renderIndicatorsModal() {
       ? defs.filter((d) =>
           d.name.toLowerCase().includes(query) ||
           d.category.toLowerCase().includes(query) ||
-          !!active[d.id]
+          Object.keys(active).some((k) => defIdOf(k) === d.id)
         )
       : defs;
     if (visible.length === 0) continue;
@@ -839,99 +878,131 @@ function renderIndicatorsModal() {
     modalList.appendChild(header);
 
     for (const def of visible) {
-      const checked = !!active[def.id];
+      const instanceKeys = Object.keys(active)
+        .filter((k) => defIdOf(k) === def.id)
+        .sort();
+      const hasInstances = instanceKeys.length > 0;
+
       const row = document.createElement("div");
-      row.className = "indicator-row" + (checked ? " is-active" : "");
+      row.className = "indicator-row" + (hasInstances ? " is-active" : "");
       row.dataset.id = def.id;
 
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = checked;
-      cb.addEventListener("change", () => {
-        if (cb.checked) {
-          const params = {};
-          for (const p of def.params) params[p.key] = p.default;
-          modalPane.setIndicator(def.id, params);
-        } else {
-          modalPane.removeIndicator(def.id);
-        }
+      // ── Header row: name + add button ──────────────────────────────────
+      const top = document.createElement("div");
+      top.className = "indicator-top";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "ind-name";
+      nameEl.textContent = def.name;
+
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "ind-add-btn";
+      addBtn.title = hasInstances ? "Add another instance" : "Add indicator";
+      addBtn.textContent = hasInstances ? "+" : "+ Add";
+      addBtn.addEventListener("click", () => {
+        modalPane.addIndicatorInstance(def.id);
         renderIndicatorsModal();
       });
 
-      const name = document.createElement("div");
-      name.className = "ind-name";
-      name.textContent = def.name;
+      top.append(nameEl, addBtn);
+      row.appendChild(top);
 
-      const paramsEl = document.createElement("div");
-      paramsEl.className = "ind-params";
-      if (def.params.length > 0 && checked) {
+      // ── Per-instance rows ───────────────────────────────────────────────
+      for (let i = 0; i < instanceKeys.length; i++) {
+        const key = instanceKeys[i];
+        const inst = document.createElement("div");
+        inst.className = "indicator-instance";
+
+        // Instance header: optional #N badge + params + remove button
+        const instHeader = document.createElement("div");
+        instHeader.className = "instance-header";
+
+        if (instanceKeys.length > 1) {
+          const badge = document.createElement("span");
+          badge.className = "instance-num";
+          badge.textContent = `#${i + 1}`;
+          instHeader.appendChild(badge);
+        }
+
+        const paramsEl = document.createElement("div");
+        paramsEl.className = "ind-params";
         for (const p of def.params) {
           const lbl = document.createElement("span");
           lbl.textContent = p.key;
           const inp = document.createElement("input");
           inp.type = "number";
-          inp.value = active[def.id][p.key] ?? p.default;
+          inp.value = active[key][p.key] ?? p.default;
           if (p.min  != null) inp.min  = p.min;
           if (p.max  != null) inp.max  = p.max;
           if (p.step != null) inp.step = p.step;
           inp.addEventListener("change", () => {
             const v = Number(inp.value);
             if (!Number.isFinite(v)) return;
-            const cur = modalPane.state.indicators[def.id] || {};
-            modalPane.setIndicator(def.id, { ...cur, [p.key]: v });
+            const cur = modalPane.state.indicators[key] || {};
+            modalPane.setIndicator(key, { ...cur, [p.key]: v });
           });
           paramsEl.append(lbl, inp);
         }
-      }
 
-      const top = document.createElement("div");
-      top.className = "indicator-top";
-      top.append(cb, name, paramsEl);
-      row.appendChild(top);
-
-      if (checked && def.colors && def.colors.length > 0) {
-        const colorsRow = document.createElement("div");
-        colorsRow.className = "indicator-colors";
-        const currentColors = (active[def.id].colors || {});
-        for (const slot of def.colors) {
-          const lbl = document.createElement("label");
-          lbl.className = "color-slot";
-          lbl.title = `${slot.label} color`;
-          const span = document.createElement("span");
-          span.textContent = slot.label;
-          const inp = document.createElement("input");
-          inp.type = "color";
-          inp.value = (typeof currentColors[slot.key] === "string"
-            && /^#[0-9a-fA-F]{6}$/.test(currentColors[slot.key]))
-              ? currentColors[slot.key]
-              : slot.default;
-          inp.addEventListener("change", () => {
-            const cur = modalPane.state.indicators[def.id] || {};
-            modalPane.setIndicator(def.id, {
-              ...cur,
-              colors: { ...(cur.colors || {}), [slot.key]: inp.value },
-            });
-          });
-          lbl.append(span, inp);
-          colorsRow.appendChild(lbl);
-        }
-
-        // "Reset colors to defaults" link for this indicator
-        const reset = document.createElement("button");
-        reset.type = "button";
-        reset.className = "color-reset";
-        reset.textContent = "reset";
-        reset.title = "Reset colors to defaults";
-        reset.addEventListener("click", () => {
-          const cur = modalPane.state.indicators[def.id] || {};
-          const next = { ...cur };
-          delete next.colors;
-          modalPane.setIndicator(def.id, next);
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "inst-remove";
+        removeBtn.textContent = "×";
+        removeBtn.title = "Remove this instance";
+        removeBtn.addEventListener("click", () => {
+          modalPane.removeIndicator(key);
           renderIndicatorsModal();
         });
-        colorsRow.appendChild(reset);
 
-        row.appendChild(colorsRow);
+        instHeader.append(paramsEl, removeBtn);
+        inst.appendChild(instHeader);
+
+        // Colors row for this instance
+        if (def.colors && def.colors.length > 0) {
+          const colorsRow = document.createElement("div");
+          colorsRow.className = "indicator-colors";
+          const currentColors = (active[key].colors || {});
+          for (const slot of def.colors) {
+            const lbl = document.createElement("label");
+            lbl.className = "color-slot";
+            lbl.title = slot.label;
+            const span = document.createElement("span");
+            span.textContent = slot.label;
+            const inp = document.createElement("input");
+            inp.type = "color";
+            inp.value = (typeof currentColors[slot.key] === "string"
+              && /^#[0-9a-fA-F]{6}$/.test(currentColors[slot.key]))
+                ? currentColors[slot.key]
+                : slot.default;
+            inp.addEventListener("change", () => {
+              const cur = modalPane.state.indicators[key] || {};
+              modalPane.setIndicator(key, {
+                ...cur,
+                colors: { ...(cur.colors || {}), [slot.key]: inp.value },
+              });
+            });
+            lbl.append(span, inp);
+            colorsRow.appendChild(lbl);
+          }
+
+          const reset = document.createElement("button");
+          reset.type = "button";
+          reset.className = "color-reset";
+          reset.textContent = "reset";
+          reset.title = "Reset colors to defaults";
+          reset.addEventListener("click", () => {
+            const cur = modalPane.state.indicators[key] || {};
+            const next = { ...cur };
+            delete next.colors;
+            modalPane.setIndicator(key, next);
+            renderIndicatorsModal();
+          });
+          colorsRow.appendChild(reset);
+          inst.appendChild(colorsRow);
+        }
+
+        row.appendChild(inst);
       }
 
       modalList.appendChild(row);

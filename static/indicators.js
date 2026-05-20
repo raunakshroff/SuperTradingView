@@ -1015,6 +1015,66 @@
       compute: (c, _p, col) => volumeBars(c, withAlpha(col.up, 0.6), withAlpha(col.down, 0.6)),
       apply: (s, d) => s[0].setData(d),
     },
+
+    // ----- Crossover Analysis -----
+    {
+      id: "ma_cross",
+      name: "MA Crossover — Golden / Death Cross",
+      category: "Crossover",
+      overlay: true,
+      params: [
+        { key: "fast", default: 50,  min: 2, max: 500, label: "Fast Period" },
+        { key: "slow", default: 200, min: 2, max: 500, label: "Slow Period" },
+        // 0 = SMA, 1 = EMA
+        { key: "type", default: 0, min: 0, max: 1, step: 1, label: "Type 0=SMA 1=EMA" },
+      ],
+      colors: [
+        { key: "fast",   label: "Fast MA",      default: "#26a69a" },
+        { key: "slow",   label: "Slow MA",      default: "#ef5350" },
+        { key: "golden", label: "Golden Cross", default: "#ffd700" },
+        { key: "death",  label: "Death Cross",  default: "#ff4422" },
+      ],
+      build: (chart, _s, col) => [
+        ohlcLine(chart, col.fast, 0, { lineWidth: 2 }),
+        ohlcLine(chart, col.slow, 0, { lineWidth: 2, lineStyle: 2 }),
+      ],
+      compute: (c, p, col) => {
+        const fp = Math.max(2, +p.fast || 50);
+        const sp = Math.max(2, +p.slow || 200);
+        const fn = +p.type === 1 ? ema : sma;
+        const fastData = fn(c, fp);
+        const slowData = fn(c, sp);
+        const fastMap = new Map(fastData.map((pt) => [pt.time, pt.value]));
+        const markers = [];
+        let prevF = null, prevS = null;
+        for (const sd of slowData) {
+          const f = fastMap.get(sd.time);
+          if (f !== undefined) {
+            if (prevF !== null) {
+              if (prevF <= prevS && f > sd.value) {
+                markers.push({
+                  time: sd.time, position: "belowBar",
+                  color: col.golden, shape: "arrowUp", text: "Golden",
+                });
+              } else if (prevF >= prevS && f < sd.value) {
+                markers.push({
+                  time: sd.time, position: "aboveBar",
+                  color: col.death, shape: "arrowDown", text: "Death",
+                });
+              }
+            }
+            prevF = f;
+            prevS = sd.value;
+          }
+        }
+        return { fast: fastData, slow: slowData, markers };
+      },
+      apply: (s, d) => {
+        s[0].setData(d.fast);
+        s[1].setData(d.slow);
+        s[0].setMarkers(d.markers);
+      },
+    },
   ];
 
   window.Indicators = { DEFS };

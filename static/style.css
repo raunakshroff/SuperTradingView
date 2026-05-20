@@ -520,19 +520,10 @@ select:focus { border-color: var(--accent); }
 }
 
 .indicator-top {
-  display: grid;
-  grid-template-columns: 20px 1fr auto;
-  gap: 8px;
+  display: flex;
   align-items: center;
+  gap: 8px;
   min-height: 26px;
-}
-
-/* Checkbox inside the indicator row */
-.indicator-row input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--accent);
-  cursor: pointer;
 }
 
 .ind-name {
