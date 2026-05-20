@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local config
+.claude/
+.env
+*.local
+
+# Build / cache
+node_modules/
+dist/
+build/
+
+# Logs and screenshots
+*.log
+chart_screenshot.png

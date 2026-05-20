@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SuperTradingView</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">SuperTradingView</div>
+    <div class="controls">
+      <label for="chart-count">Number of Charts</label>
+      <select id="chart-count">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4">4</option>
+        <option value="6">6</option>
+        <option value="8">8</option>
+      </select>
+    </div>
+  </header>
+
+  <main id="grid" class="grid"></main>
+
+  <datalist id="symbols-datalist"></datalist>
+
+  <template id="pane-template">
+    <section class="pane">
+      <div class="pane-header">
+        <input class="symbol-input" list="symbols-datalist" placeholder="Symbol..." spellcheck="false" />
+        <select class="tf-select"></select>
+        <button class="fx-btn" type="button" title="Indicators">ƒx</button>
+        <div class="ticker">
+          <span class="ticker-dot"></span>
+          <span class="ticker-price">—</span>
+          <span class="ticker-change"></span>
+        </div>
+        <span class="status-badge" hidden></span>
+      </div>
+      <div class="chart"></div>
+    </section>
+  </template>
+
+  <div id="indicators-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel">
+      <div class="modal-header">
+        <span class="modal-title">Indicators</span>
+        <span class="modal-sub"></span>
+        <button class="modal-close" type="button" data-close>×</button>
+      </div>
+      <div class="modal-body" id="indicators-list"></div>
+      <div class="modal-footer">
+        <button class="btn-primary" type="button" data-close>Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/indicators.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
