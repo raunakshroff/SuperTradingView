@@ -314,17 +314,79 @@ select:focus, input.symbol-input:focus {
 }
 
 .indicator-top {
-  display: grid;
-  grid-template-columns: 22px 1fr auto;
-  gap: 8px;
+  display: flex;
   align-items: center;
+  gap: 8px;
 }
+
+.indicator-row.is-active {
+  background: rgba(79, 140, 255, 0.04);
+}
+
+/* Add / "+ Add" button in the indicator header */
+.ind-add-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 2px 9px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ind-add-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Per-instance block indented below its indicator header */
+.indicator-instance {
+  margin: 4px 0 4px 0;
+  padding: 5px 6px 5px 12px;
+  border-left: 2px solid var(--border);
+  border-radius: 0 4px 4px 0;
+  background: rgba(255,255,255,0.02);
+}
+
+.instance-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Small #N badge when multiple instances of the same indicator exist */
+.instance-num {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  background: rgba(79, 140, 255, 0.12);
+  border: 1px solid rgba(79, 140, 255, 0.3);
+  border-radius: 3px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+
+/* × remove button on each instance */
+.inst-remove {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.inst-remove:hover { color: var(--down); }
 
 .indicator-colors {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  margin: 6px 0 2px 30px;
+  margin: 6px 0 2px 0;
   align-items: center;
 }
 
@@ -373,6 +435,8 @@ select:focus, input.symbol-input:focus {
 
 .indicator-row .ind-name {
   font-size: 13px;
+  flex: 1;
+  min-width: 0;
 }
 
 .indicator-row .ind-params {
