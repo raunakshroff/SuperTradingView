@@ -179,7 +179,7 @@ class Pane {
 
     this.headerEl = this.root.querySelector(".pane-header");
     this.symbolInput = this.root.querySelector(".symbol-input");
-    this.tfSelect = this.root.querySelector(".tf-select");
+    this.tfPillsEl = this.root.querySelector(".tf-pills");
     this.fxBtn = this.root.querySelector(".fx-btn");
     this.tickerPrice = this.root.querySelector(".ticker-price");
     this.tickerChange = this.root.querySelector(".ticker-change");
@@ -187,11 +187,8 @@ class Pane {
     this.statusBadge = this.root.querySelector(".status-badge");
     this.chartEl = this.root.querySelector(".chart");
 
-    this.tfSelect.innerHTML = SYMBOLS.timeframes
-      .map((t) => `<option value="${t}">${t}</option>`)
-      .join("");
     this.symbolInput.value = this.state.symbol;
-    this.tfSelect.value = this.state.tf;
+    this._buildTfPills();
 
     this._buildChart();
     // Build series objects for any persisted indicators before history loads.
@@ -212,7 +209,6 @@ class Pane {
 
     this.symbolInput.addEventListener("change", () => this._onSymbolChange());
     this.symbolInput.addEventListener("blur",   () => this._onSymbolChange());
-    this.tfSelect.addEventListener("change",    () => this._onTfChange());
     this.fxBtn.addEventListener("click",        () => openIndicatorsModal(this));
 
     this.subscribe();
@@ -272,11 +268,19 @@ class Pane {
     this.resubscribe();
   }
 
-  _onTfChange() {
-    const tf = this.tfSelect.value;
-    if (tf === this.state.tf) return;
-    this.setState({ tf });
-    this.resubscribe();
+  _buildTfPills() {
+    this.tfPillsEl.innerHTML = SYMBOLS.timeframes
+      .map((t) => `<button class="tf-pill${t === this.state.tf ? " active" : ""}" data-tf="${t}" type="button">${t}</button>`)
+      .join("");
+    this.tfPillsEl.addEventListener("click", (e) => {
+      const btn = e.target.closest(".tf-pill");
+      if (!btn) return;
+      const tf = btn.dataset.tf;
+      if (tf === this.state.tf) return;
+      this.tfPillsEl.querySelectorAll(".tf-pill").forEach((b) => b.classList.toggle("active", b === btn));
+      this.setState({ tf });
+      this.resubscribe();
+    });
   }
 
   async subscribe() {
@@ -429,8 +433,10 @@ class Pane {
   }
 
   _updateFxButton() {
-    const any = Object.keys(this.state.indicators).length > 0;
-    this.fxBtn.classList.toggle("has-active", any);
+    const count = Object.keys(this.state.indicators).length;
+    this.fxBtn.classList.toggle("has-active", count > 0);
+    const countEl = this.fxBtn.querySelector(".fx-count");
+    if (countEl) countEl.textContent = count > 0 ? String(count) : "";
   }
 
   _activeSubPanes() {
@@ -688,7 +694,7 @@ class Pane {
 // --- Grid management --------------------------------------------------------
 
 const gridEl = document.getElementById("grid");
-const countSel = document.getElementById("chart-count");
+let currentCount = 4;   // tracks which layout button is active
 let panes = [];
 let paneStates = [];
 
@@ -712,10 +718,9 @@ function loadState() {
 }
 
 function saveState() {
-  // Pull live state back from panes
   for (let i = 0; i < panes.length; i++) paneStates[i] = panes[i].state;
   localStorage.setItem(LS_PANES, JSON.stringify(paneStates));
-  localStorage.setItem(LS_COUNT, String(parseInt(countSel.value, 10)));
+  localStorage.setItem(LS_COUNT, String(currentCount));
 }
 
 function applyLayout(count) {
@@ -738,12 +743,23 @@ function buildPanes(count) {
   });
 }
 
-function onCountChange() {
-  const count = parseInt(countSel.value, 10);
+function setActiveLayoutBtn(count) {
+  document.querySelectorAll(".layout-btn").forEach((btn) => {
+    btn.classList.toggle("active", parseInt(btn.dataset.count, 10) === count);
+  });
+}
+
+document.getElementById("layout-switcher").addEventListener("click", (e) => {
+  const btn = e.target.closest(".layout-btn");
+  if (!btn) return;
+  const count = parseInt(btn.dataset.count, 10);
+  if (!COUNT_LAYOUTS[count] || count === currentCount) return;
+  currentCount = count;
+  setActiveLayoutBtn(count);
   applyLayout(count);
   buildPanes(count);
   saveState();
-}
+});
 
 window.addEventListener("resize", () => {
   for (const p of panes) p.resize();
@@ -754,13 +770,20 @@ window.addEventListener("resize", () => {
 const modalEl = document.getElementById("indicators-modal");
 const modalList = document.getElementById("indicators-list");
 const modalSub = modalEl.querySelector(".modal-sub");
+const modalSearchEl = document.getElementById("indicators-search");
 let modalPane = null;
+
+// Re-render the list whenever the user types in the search box
+modalSearchEl.addEventListener("input", () => { if (modalPane) renderIndicatorsModal(); });
 
 function openIndicatorsModal(pane, focusId) {
   modalPane = pane;
   modalSub.textContent = `${pane.state.symbol} · ${pane.state.tf}`;
+  modalSearchEl.value = "";   // clear previous query
   renderIndicatorsModal();
   modalEl.hidden = false;
+  // Auto-focus search so users can type immediately
+  requestAnimationFrame(() => modalSearchEl.focus());
   if (focusId) {
     requestAnimationFrame(() => {
       const row = modalList.querySelector(`.indicator-row[data-id="${focusId}"]`);
@@ -787,26 +810,39 @@ document.addEventListener("keydown", (e) => {
 function renderIndicatorsModal() {
   if (!modalPane) return;
   const active = modalPane.state.indicators;
+  const query = (modalSearchEl.value || "").trim().toLowerCase();
   modalList.innerHTML = "";
 
-  // Group defs by category, preserving DEFS order within each group.
   const groups = new Map();
   for (const def of Indicators.DEFS) {
     if (!groups.has(def.category)) groups.set(def.category, []);
     groups.get(def.category).push(def);
   }
 
+  let totalVisible = 0;
+
   for (const [category, defs] of groups) {
+    // Filter within category; always show active indicators regardless of query
+    const visible = query
+      ? defs.filter((d) =>
+          d.name.toLowerCase().includes(query) ||
+          d.category.toLowerCase().includes(query) ||
+          !!active[d.id]
+        )
+      : defs;
+    if (visible.length === 0) continue;
+    totalVisible += visible.length;
+
     const header = document.createElement("div");
     header.className = "indicator-category";
     header.textContent = category;
     modalList.appendChild(header);
 
-    for (const def of defs) {
-      const row = document.createElement("div");
-      row.className = "indicator-row";
-      row.dataset.id = def.id;
+    for (const def of visible) {
       const checked = !!active[def.id];
+      const row = document.createElement("div");
+      row.className = "indicator-row" + (checked ? " is-active" : "");
+      row.dataset.id = def.id;
 
       const cb = document.createElement("input");
       cb.type = "checkbox";
@@ -901,6 +937,14 @@ function renderIndicatorsModal() {
       modalList.appendChild(row);
     }
   }
+
+  // Empty state when search returns nothing
+  if (totalVisible === 0 && query) {
+    const empty = document.createElement("div");
+    empty.className = "modal-empty";
+    empty.innerHTML = `<strong>No results</strong>No indicators match <em>"${query}"</em>`;
+    modalList.appendChild(empty);
+  }
 }
 
 // --- Boot -------------------------------------------------------------------
@@ -909,8 +953,8 @@ function renderIndicatorsModal() {
   await loadSymbols();
   const { count, states } = loadState();
   paneStates = states;
-  countSel.value = String(count);
+  currentCount = count;
+  setActiveLayoutBtn(count);
   applyLayout(count);
   buildPanes(count);
-  countSel.addEventListener("change", onCountChange);
 })();
