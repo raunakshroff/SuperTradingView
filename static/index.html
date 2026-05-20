@@ -9,16 +9,54 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">SuperTradingView</div>
-    <div class="controls">
-      <label for="chart-count">Number of Charts</label>
-      <select id="chart-count">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="4">4</option>
-        <option value="6">6</option>
-        <option value="8">8</option>
-      </select>
+    <div class="brand">
+      <span class="brand-mark"></span>
+      SuperTradingView
+    </div>
+
+    <!-- Visual grid-layout switcher (replaces plain <select>) -->
+    <div class="layout-switcher" id="layout-switcher" role="group" aria-label="Chart layout">
+      <button class="layout-btn" data-count="1" title="Single chart" type="button">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
+          <rect x="1" y="1" width="14" height="10" rx="1.5"/>
+        </svg>
+      </button>
+      <button class="layout-btn" data-count="2" title="2 charts" type="button">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
+          <rect x="1" y="1" width="6" height="10" rx="1.5"/>
+          <rect x="9" y="1" width="6" height="10" rx="1.5"/>
+        </svg>
+      </button>
+      <button class="layout-btn" data-count="4" title="4 charts" type="button">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
+          <rect x="1" y="1" width="6" height="4" rx="1"/>
+          <rect x="9" y="1" width="6" height="4" rx="1"/>
+          <rect x="1" y="7" width="6" height="4" rx="1"/>
+          <rect x="9" y="7" width="6" height="4" rx="1"/>
+        </svg>
+      </button>
+      <button class="layout-btn" data-count="6" title="6 charts" type="button">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
+          <rect x="1"    y="1" width="3.5" height="4" rx="0.8"/>
+          <rect x="6.25" y="1" width="3.5" height="4" rx="0.8"/>
+          <rect x="11.5" y="1" width="3.5" height="4" rx="0.8"/>
+          <rect x="1"    y="7" width="3.5" height="4" rx="0.8"/>
+          <rect x="6.25" y="7" width="3.5" height="4" rx="0.8"/>
+          <rect x="11.5" y="7" width="3.5" height="4" rx="0.8"/>
+        </svg>
+      </button>
+      <button class="layout-btn" data-count="8" title="8 charts" type="button">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
+          <rect x="1"    y="1" width="2.5" height="4" rx="0.6"/>
+          <rect x="4.5"  y="1" width="2.5" height="4" rx="0.6"/>
+          <rect x="8"    y="1" width="2.5" height="4" rx="0.6"/>
+          <rect x="11.5" y="1" width="2.5" height="4" rx="0.6"/>
+          <rect x="1"    y="7" width="2.5" height="4" rx="0.6"/>
+          <rect x="4.5"  y="7" width="2.5" height="4" rx="0.6"/>
+          <rect x="8"    y="7" width="2.5" height="4" rx="0.6"/>
+          <rect x="11.5" y="7" width="2.5" height="4" rx="0.6"/>
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -26,14 +64,25 @@
 
   <datalist id="symbols-datalist"></datalist>
 
+  <!-- Pane template — cloned for each chart slot -->
   <template id="pane-template">
     <section class="pane">
       <div class="pane-header">
-        <input class="symbol-input" list="symbols-datalist" placeholder="Symbol..." spellcheck="false" />
-        <select class="tf-select"></select>
-        <button class="fx-btn" type="button" title="Indicators">ƒx</button>
+        <input class="symbol-input" list="symbols-datalist" placeholder="Symbol…" spellcheck="false" autocomplete="off" />
+
+        <!-- Timeframe pill buttons (populated by JS from SYMBOLS.timeframes) -->
+        <div class="tf-pills" role="group" aria-label="Timeframe"></div>
+
+        <!-- Indicators button — shows active count badge when non-zero -->
+        <button class="fx-btn" type="button" title="Indicators (I)">
+          <span class="fx-icon">ƒx</span>
+          <span class="fx-count" aria-label="active indicators"></span>
+        </button>
+
+        <div class="pane-divider"></div>
+
         <div class="ticker">
-          <span class="ticker-dot"></span>
+          <span class="ticker-dot" aria-hidden="true"></span>
           <span class="ticker-price">—</span>
           <span class="ticker-change"></span>
         </div>
@@ -43,15 +92,28 @@
     </section>
   </template>
 
+  <!-- Indicators modal -->
   <div id="indicators-modal" class="modal" hidden>
     <div class="modal-backdrop" data-close></div>
     <div class="modal-panel">
       <div class="modal-header">
         <span class="modal-title">Indicators</span>
         <span class="modal-sub"></span>
-        <button class="modal-close" type="button" data-close>×</button>
+        <button class="modal-close" type="button" data-close aria-label="Close">×</button>
       </div>
+
+      <!-- Live search — filters the list below -->
+      <div class="modal-search-wrap">
+        <svg class="modal-search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <circle cx="5.5" cy="5.5" r="4"/>
+          <line x1="9" y1="9" x2="13" y2="13"/>
+        </svg>
+        <input type="text" id="indicators-search" class="modal-search"
+               placeholder="Search indicators…" autocomplete="off" spellcheck="false" />
+      </div>
+
       <div class="modal-body" id="indicators-list"></div>
+
       <div class="modal-footer">
         <button class="btn-primary" type="button" data-close>Done</button>
       </div>
