@@ -1,6 +1,6 @@
 # SuperTradingView
 
-A local trading dashboard. Watch up to 8 live charts side-by-side, each with its own symbol, timeframe, and any combination of 32 technical indicators. Crypto streams in real time from Hyperliquid; Indian stocks come from a Flask bridge over yfinance. Built on Lightweight Charts v5 with native multi-pane support.
+A local trading dashboard. Watch up to 8 live charts side-by-side, each with its own symbol, timeframe, and any combination of 32 technical indicators. Crypto streams in real time from Hyperliquid; stocks / ETFs / futures / FX stream from any ticker Yahoo Finance indexes via a Flask bridge over yfinance. Live symbol search across both. Built on Lightweight Charts v5 with native multi-pane support.
 
 ![SuperTradingView dashboard](docs/screenshot.png)
 
@@ -10,7 +10,7 @@ A local trading dashboard. Watch up to 8 live charts side-by-side, each with its
 - **Independent panes** — each pane picks its own symbol and timeframe (1m, 5m, 15m, 1h, 4h, 1d). Per-pane state persists in `localStorage`.
 - **Two default data sources, swappable**
   - **Hyperliquid** for crypto via the public WebSocket (`wss://api.hyperliquid.xyz/ws`), opened directly from the browser. Historical candles are proxied through Flask to avoid CORS.
-  - **yfinance** for Indian stocks (NSE), bridged into the browser via Server-Sent Events. Polls every 2 s, emits on price change.
+  - **yfinance** for everything Yahoo Finance covers — NSE/BSE Indian equities, US equities, global ETFs, indices, futures, FX, even crypto pairs. Bridged into the browser via Server-Sent Events: Flask polls every 2 s and emits on price change.
 - **Pluggable data layer** — drop in Alpaca / Binance / Zerodha / Groww / Polygon by writing one class in [`data_source.py`](data_source.py) and adding it to the `REGISTRY`. No frontend changes needed.
 - **32 technical indicators** with custom params and per-line colours:
 
@@ -61,8 +61,19 @@ SuperTradingView/
     ├── index.html      # Topbar, grid, pane template, indicators modal
     ├── style.css       # Dark theme, grid layout, modal, legend chips, flash animations
     ├── indicators.js   # 32 indicator defs with build / compute / apply per indicator
-    └── app.js          # Pane class, Hyperliquid WS multiplexer, SSE client, modal, legends
+    └── app.js          # Pane class, HL WS multiplexer, SSE client, modal, legends, debounced symbol search
 ```
+
+## HTTP endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | Serves the dashboard |
+| `GET` | `/sources` | `[{name, asset_class}]` — registered data sources |
+| `GET` | `/symbols` | Curated symbol list + supported timeframes |
+| `GET` | `/symbols?q=...` | Live search merging curated + every source's `search_symbols(q)` |
+| `GET` | `/history?source=...&symbol=...&tf=...&limit=500` | OHLCV array from the named source |
+| `GET` | `/stream/quotes?source=...&symbol=...&tf=...` | SSE stream of `{time, price}` ticks (currently only `yfinance`; Hyperliquid clients connect to `wss://api.hyperliquid.xyz/ws` directly) |
 
 ## Adding a new data source
 
@@ -81,12 +92,15 @@ class AlpacaSource(DataSource):
         ...
 
     def search_symbols(self, query: str) -> list[dict]:
-        return []
+        # Called by /symbols?q=... — return up to ~25 matches as
+        # [{symbol, label, source: "alpaca", asset_class}, ...]
+        # Return [] to opt out (existing curated entries still surface).
+        ...
 
 REGISTRY["alpaca"] = AlpacaSource()
 ```
 
-Add a few `{ "symbol": "...", "label": "...", "source": "alpaca", "asset_class": "stock" }` entries to [`symbols.json`](symbols.json) and the frontend dropdowns + autocomplete pick them up automatically.
+Implementing `search_symbols` is optional but recommended — it's what lets users find tickers your broker exposes by typing in any pane's symbol box. If you only want a handful of tickers, leave it returning `[]` and add a few `{ "symbol": "...", "label": "...", "source": "alpaca", "asset_class": "stock" }` entries to [`symbols.json`](symbols.json) instead — they'll show up immediately in the curated quick-load list.
 
 ## Adding a new indicator
 
