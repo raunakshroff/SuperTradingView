@@ -13,6 +13,7 @@ from pathlib import Path
 from flask import Flask, Response, jsonify, request, send_from_directory
 
 from data_source import (
+    REGISTRY,
     TIMEFRAMES,
     get_source,
     list_sources,
@@ -47,14 +48,45 @@ def sources():
 
 @app.route("/symbols")
 def symbols():
-    q = (request.args.get("q") or "").strip().lower()
-    items = load_symbols(str(SYMBOLS_FILE))
-    if q:
-        items = [
-            s for s in items
-            if q in s["symbol"].lower() or q in s["label"].lower()
-        ]
-    return jsonify({"symbols": items, "timeframes": TIMEFRAMES})
+    """Symbol search.
+
+    - No `q`: return the curated symbols.json list (instant, no network).
+    - With `q`: return curated matches first, then live results from every
+      data source's `search_symbols(q)` (Hyperliquid meta + Yahoo Search via
+      yfinance). De-duped by symbol (case-insensitive).
+    """
+    q = (request.args.get("q") or "").strip()
+    curated = load_symbols(str(SYMBOLS_FILE))
+
+    if not q:
+        return jsonify({"symbols": curated, "timeframes": TIMEFRAMES})
+
+    ql = q.lower()
+    seen: set[str] = set()
+    merged: list[dict] = []
+
+    def add(item: dict) -> None:
+        key = item["symbol"].upper()
+        if key in seen:
+            return
+        seen.add(key)
+        merged.append(item)
+
+    # Curated matches first
+    for s in curated:
+        if ql in s["symbol"].lower() or ql in s["label"].lower():
+            add(s)
+
+    # Live searches from every registered source
+    for src in REGISTRY.values():
+        try:
+            for s in src.search_symbols(q):
+                add(s)
+        except Exception:
+            # Don't let one broken source kill the response
+            continue
+
+    return jsonify({"symbols": merged[:50], "timeframes": TIMEFRAMES})
 
 
 # --- History -------------------------------------------------------------------

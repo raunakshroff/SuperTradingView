@@ -28,7 +28,12 @@ A local trading dashboard. Watch up to 8 live charts side-by-side, each with its
   Sub-pane indicators (RSI, MACD, ADX, etc.) render in their own pane below the candles with their own price axis. Stretch factors scale automatically so the price chart stays usable however many sub-panes you stack.
 - **Per-pane legend chips** in the top-left of each pane: indicator name + params + colour swatch + settings gear (⚙ opens the indicators modal scrolled to that exact indicator) + quick remove (×).
 - **Live colour-coded ticker bar** in each pane header that flashes green or red on every price change.
-- **Symbol autocomplete** from a curated list of 30 popular Hyperliquid perps and NSE tickers (free-text input — type anything else and it falls back to a sensible source).
+- **Live symbol search** — as you type in any symbol input, the dropdown queries the backend, which merges:
+  - a curated quick-load list of 30 popular Hyperliquid perps and NSE tickers (instant),
+  - the full **Hyperliquid perp universe** via `/info?meta` (cached 1 hour),
+  - **Yahoo Finance's global search** via `yfinance.Search` — equities, ETFs, indices, futures, crypto across every exchange Yahoo indexes.
+
+  Type `TSLA` and you'll get Tesla + leveraged ETFs; type `tata motors` and you'll get the NSE/BSE listings; type `PEPE` and you'll get Hyperliquid's `kPEPE` perp. Each match carries its source so the chart routes correctly.
 - **No build step, no deployment, no API keys** required for the default sources.
 
 ## Quick start
@@ -50,7 +55,7 @@ Requirements: Python 3.10+ and an internet connection (for the Hyperliquid WS an
 SuperTradingView/
 ├── app.py              # Flask app: /, /sources, /symbols, /history, /stream/quotes (SSE)
 ├── data_source.py      # DataSource ABC + HyperliquidSource + YFinanceSource + REGISTRY
-├── symbols.json        # Curated crypto + NSE symbol list (drives autocomplete + source routing)
+├── symbols.json        # Curated quick-load list (instant); live search supplements via Hyperliquid + Yahoo
 ├── requirements.txt    # flask, yfinance, requests
 └── static/
     ├── index.html      # Topbar, grid, pane template, indicators modal

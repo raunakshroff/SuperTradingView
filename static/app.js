@@ -40,18 +40,61 @@ function defIdOf(key) {
 
 const SYMBOLS = { byKey: new Map(), all: [], timeframes: [] };
 
+function _renderSymbolsDatalist(symbols) {
+  const dl = document.getElementById("symbols-datalist");
+  // Build with DOM API so user-controlled labels can't inject HTML.
+  while (dl.firstChild) dl.removeChild(dl.firstChild);
+  for (const s of symbols) {
+    const opt = document.createElement("option");
+    opt.value = s.symbol;
+    opt.textContent = `${s.label} (${s.asset_class})`;
+    dl.appendChild(opt);
+  }
+}
+
+function _registerSymbols(symbols) {
+  for (const s of symbols) {
+    SYMBOLS.byKey.set(s.symbol.toUpperCase(), s);
+  }
+}
+
 async function loadSymbols() {
   const res = await fetch("/symbols");
   const data = await res.json();
   SYMBOLS.all = data.symbols;
   SYMBOLS.timeframes = data.timeframes;
-  for (const s of data.symbols) {
-    SYMBOLS.byKey.set(s.symbol.toUpperCase(), s);
+  _registerSymbols(data.symbols);
+  _renderSymbolsDatalist(data.symbols);
+}
+
+// Debounced live search against /symbols?q=...
+// The backend merges curated matches with Hyperliquid /info?meta and
+// yfinance.Search (Yahoo Search API).
+let _searchTimer = null;
+let _searchToken = 0;
+
+function querySymbolsDebounced(query, delay = 250) {
+  clearTimeout(_searchTimer);
+  if (!query || query.length < 1) {
+    // Empty input: show the curated default list again
+    _renderSymbolsDatalist(SYMBOLS.all);
+    return;
   }
-  const dl = document.getElementById("symbols-datalist");
-  dl.innerHTML = SYMBOLS.all
-    .map((s) => `<option value="${s.symbol}">${s.label} (${s.asset_class})</option>`)
-    .join("");
+  _searchTimer = setTimeout(() => querySymbolsNow(query), delay);
+}
+
+async function querySymbolsNow(query) {
+  const token = ++_searchToken;
+  try {
+    const res = await fetch(`/symbols?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (token !== _searchToken) return;  // a newer search has started
+    _registerSymbols(data.symbols);
+    _renderSymbolsDatalist(data.symbols);
+  } catch {
+    /* silent — keep last datalist contents */
+  }
 }
 
 function resolveSource(symbolText) {
@@ -221,6 +264,11 @@ class Pane {
 
     this.symbolInput.addEventListener("change", () => this._onSymbolChange());
     this.symbolInput.addEventListener("blur",   () => this._onSymbolChange());
+    // Live search the datalist as the user types, against the backend
+    // (Hyperliquid universe + Yahoo Search via yfinance).
+    this.symbolInput.addEventListener("input", () => {
+      querySymbolsDebounced(this.symbolInput.value);
+    });
     this.tfSelect.addEventListener("change",    () => this._onTfChange());
     this.fxBtn.addEventListener("click",        () => openIndicatorsModal(this));
 
