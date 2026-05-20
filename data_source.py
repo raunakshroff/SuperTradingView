@@ -80,6 +80,10 @@ class HyperliquidSource(DataSource):
     # Hyperliquid interval mapping
     _TF_MAP = {"1m": "1m", "5m": "5m", "15m": "15m", "1h": "1h", "4h": "4h", "1d": "1d"}
 
+    _universe_cache: list[dict] | None = None
+    _universe_cache_at: float = 0.0
+    _UNIVERSE_TTL = 3600  # seconds
+
     def get_history(self, symbol: str, timeframe: str, limit: int = 500) -> list[Candle]:
         interval = self._TF_MAP.get(timeframe, "1m")
         now_ms = int(time.time() * 1000)
@@ -112,10 +116,41 @@ class HyperliquidSource(DataSource):
         # for crypto. Kept here so the interface is uniform.
         raise NotImplementedError("Hyperliquid streams via browser WebSocket directly")
 
+    def _get_universe(self) -> list[dict]:
+        """Fetch (and cache) the full Hyperliquid perp universe from /info?meta."""
+        now = time.time()
+        if self._universe_cache is not None and now - self._universe_cache_at < self._UNIVERSE_TTL:
+            return self._universe_cache
+        try:
+            r = requests.post(self.INFO_URL, json={"type": "meta"}, timeout=10)
+            r.raise_for_status()
+            HyperliquidSource._universe_cache = r.json().get("universe", []) or []
+            HyperliquidSource._universe_cache_at = now
+        except Exception:
+            # Keep stale cache rather than wiping it on a transient failure
+            if self._universe_cache is None:
+                HyperliquidSource._universe_cache = []
+        return self._universe_cache or []
+
     def search_symbols(self, query: str) -> list[dict]:
-        # Hyperliquid has a fixed perp universe; we expose it via the curated
-        # JSON list. This method is here for symmetry / future broker fits.
-        return []
+        q = (query or "").strip().upper()
+        if not q:
+            return []
+        out: list[dict] = []
+        for coin in self._get_universe():
+            name = coin.get("name") or ""
+            if not name or coin.get("isDelisted"):
+                continue
+            if q in name.upper():
+                out.append({
+                    "symbol": name,
+                    "label": f"{name} perp",
+                    "source": self.name,
+                    "asset_class": "crypto",
+                })
+        # Exact prefix matches first, then substring
+        out.sort(key=lambda s: (not s["symbol"].upper().startswith(q), s["symbol"]))
+        return out[:25]
 
 
 # --- yfinance (Indian stocks etc.) -------------------------------------------
@@ -189,8 +224,66 @@ class YFinanceSource(DataSource):
                 pass
             time.sleep(2)
 
+    # Map Yahoo quoteType -> our asset_class
+    _ASSET_CLASS_MAP = {
+        "EQUITY": "stock",
+        "ETF": "stock",
+        "MUTUALFUND": "stock",
+        "INDEX": "stock",
+        "FUTURE": "stock",
+        "OPTION": "stock",
+        "CRYPTOCURRENCY": "crypto",
+        "CURRENCY": "fx",
+        "COMMODITY": "commodity",
+    }
+
     def search_symbols(self, query: str) -> list[dict]:
-        return []
+        """Live ticker search via yfinance.Search (Yahoo's search endpoint).
+
+        Returns up to ~15 matches. Falls back to empty list on any failure
+        so the curated symbols.json results always still surface.
+        """
+        q = (query or "").strip()
+        if not q:
+            return []
+        try:
+            yf = self._yf()
+            res = yf.Search(
+                q,
+                max_results=15,
+                news_count=0,
+                lists_count=0,
+                include_research=False,
+                enable_fuzzy_query=False,
+                raise_errors=False,
+                timeout=15,
+            )
+            quotes = getattr(res, "quotes", None) or []
+        except Exception:
+            return []
+
+        out: list[dict] = []
+        for it in quotes:
+            sym = it.get("symbol")
+            if not sym:
+                continue
+            label = (
+                it.get("shortname")
+                or it.get("longname")
+                or it.get("name")
+                or sym
+            )
+            exch = it.get("exchDisp") or it.get("exchange") or ""
+            qt = (it.get("quoteType") or "").upper()
+            asset_class = self._ASSET_CLASS_MAP.get(qt, "stock")
+            display_label = f"{label} · {exch}" if exch else str(label)
+            out.append({
+                "symbol": sym,
+                "label": display_label,
+                "source": self.name,
+                "asset_class": asset_class,
+            })
+        return out
 
 
 # --- Registry -----------------------------------------------------------------
