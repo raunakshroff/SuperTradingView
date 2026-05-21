@@ -82,6 +82,13 @@
     newId() { return "drw_" + Math.random().toString(36).slice(2, 10); },
   };
 
+  function distPointToSegment(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    if (dx === 0 && dy === 0) return Math.hypot(px - ax, py - ay);
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+
   const DASH_MAP = {
     solid: null,
     dashed: "8,4",
@@ -118,6 +125,26 @@
         g.appendChild(line);
         svg.appendChild(g);
       },
+
+      handles(drawing, layer) {
+        const [a, b] = drawing.points;
+        const pa = layer.toPx(a);
+        const pb = layer.toPx(b);
+        if (!pa || !pb) return [];
+        return [
+          { id: 0,   kind: "endpoint", x: pa.x, y: pa.y },
+          { id: 1,   kind: "endpoint", x: pb.x, y: pb.y },
+          { id: "mid", kind: "mid",    x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 },
+        ];
+      },
+
+      hitTest(drawing, x, y, layer, tol = 6) {
+        const [a, b] = drawing.points;
+        const pa = layer.toPx(a);
+        const pb = layer.toPx(b);
+        if (!pa || !pb) return false;
+        return distPointToSegment(x, y, pa.x, pa.y, pb.x, pb.y) <= tol;
+      },
     },
   ];
 
@@ -151,6 +178,7 @@
       this.activeTool = null;    // TOOL_DEFS entry while placing
       this.placePoints = [];     // points captured so far during placement
       this.selectedId = null;    // id of currently selected drawing
+      this.miniToolbar = null;   // floating mini-toolbar element for the selection
 
       this._destroyed = false;
       this._onResize = null;
@@ -193,6 +221,9 @@
       paneEl.appendChild(this.wrapper);
 
       this.wrapper.addEventListener("click", (ev) => this._onClick(ev));
+
+      // Cursor mode must remain interactive so clicks can hit-test for selection.
+      this._setOverlayInteractive(true);
 
       this._onResize = () => this._redraw();
       this._onVisRange = () => this._redraw();
@@ -243,6 +274,7 @@
         const def = TOOL_DEFS_BY_ID[d.tool];
         if (def && def.render) def.render(this.svg, d, this);
       }
+      this._renderHandles();
     }
 
     setActiveTool(toolId) {
@@ -253,7 +285,8 @@
         this.activeTool = null;
         this.placePoints = [];
         this._setCursor("default");
-        this._setOverlayInteractive(false);
+        // Cursor mode stays interactive so clicks can hit-test for selection.
+        this._setOverlayInteractive(true);
         if (this._notifyToolChange) this._notifyToolChange("cursor");
         return;
       }
@@ -265,6 +298,95 @@
       if (this._notifyToolChange) this._notifyToolChange(def.id);
     }
 
+    select(id) {
+      this.selectedId = id;
+      this._renderHandles();
+    }
+
+    deselect() {
+      this.selectedId = null;
+      this._renderHandles();
+    }
+
+    _clearHandleHost() {
+      if (!this.handleHost) return;
+      while (this.handleHost.firstChild) this.handleHost.removeChild(this.handleHost.firstChild);
+    }
+
+    _renderHandles() {
+      this._clearHandleHost();
+      if (!this.selectedId) return;
+      const d = this.drawings.find((x) => x.id === this.selectedId);
+      if (!d) return;
+      const def = TOOL_DEFS_BY_ID[d.tool];
+      if (!def || !def.handles) return;
+      const handles = def.handles(d, this);
+      if (handles.length === 0) return;
+
+      for (const h of handles) {
+        const el = document.createElement("div");
+        el.className = "draw-handle " + h.kind;
+        el.style.left = h.x + "px";
+        el.style.top  = h.y + "px";
+        el.dataset.handleId = String(h.id);
+        this.handleHost.appendChild(el);
+      }
+
+      // Mini-toolbar above the topmost handle
+      const top = handles.reduce((p, c) => (c.y < p.y ? c : p), handles[0]);
+      this.miniToolbar = this._buildMiniToolbar();
+      this.miniToolbar.style.left = top.x + "px";
+      this.miniToolbar.style.top  = Math.max(8, top.y - 36) + "px";
+      this.handleHost.appendChild(this.miniToolbar);
+    }
+
+    _buildMiniToolbar() {
+      const bar = document.createElement("div");
+      bar.className = "draw-mini-toolbar";
+      bar.innerHTML = `
+        <button class="dmt-btn" type="button" data-act="edit" title="Edit style">✏</button>
+        <button class="dmt-btn" type="button" data-act="dup"  title="Duplicate">⎘</button>
+        <button class="dmt-btn" type="button" data-act="top"  title="Bring to front">↑</button>
+        <button class="dmt-btn danger" type="button" data-act="del" title="Delete">×</button>
+      `;
+      bar.addEventListener("click", (ev) => {
+        const act = ev.target.closest("[data-act]")?.dataset.act;
+        if (!act) return;
+        ev.stopPropagation();
+        this._handleMiniAction(act);
+      });
+      return bar;
+    }
+
+    _handleMiniAction(act) {
+      const d = this.drawings.find((x) => x.id === this.selectedId);
+      if (!d) return;
+      if (act === "del") {
+        this.drawings = this.drawings.filter((x) => x.id !== d.id);
+        this.selectedId = null;
+        this.save();
+        this._redraw();
+      } else if (act === "dup") {
+        const copy = {
+          ...d,
+          id: util.newId(),
+          points: d.points.map((p) => ({ ...p })),
+          style: { ...d.style },
+          scope: { ...d.scope },
+          z: this.drawings.length,
+        };
+        this.drawings.push(copy);
+        this.save();
+        this.select(copy.id);
+        this._redraw();
+      } else if (act === "top") {
+        d.z = Math.max(...this.drawings.map((x) => x.z || 0)) + 1;
+        this.save();
+        this._redraw();
+      }
+      // "edit" wired in the Style Modal task (Task 6)
+    }
+
     _setCursor(c) { if (this.wrapper) this.wrapper.style.cursor = c; }
 
     _setOverlayInteractive(on) {
@@ -273,31 +395,54 @@
     }
 
     _onClick(ev) {
-      if (this.mode !== "placing" || !this.activeTool) return;
       const rect = this.wrapper.getBoundingClientRect();
       const x = ev.clientX - rect.left;
       const y = ev.clientY - rect.top;
-      const pt = this.fromPx(x, y);
-      if (!pt) return;
-      this.placePoints.push(pt);
 
-      if (this.placePoints.length >= this.activeTool.pointsNeeded) {
-        const drawing = {
-          id: util.newId(),
-          tool: this.activeTool.id,
-          points: this.placePoints.slice(),
-          style: { ...this.activeTool.defaultStyle },
-          scope: { ...this.activeTool.defaultScope },
-          z: this.drawings.length,
-          createdAt: Math.floor(Date.now() / 1000),
-        };
-        this.drawings.push(drawing);
-        this.save();
-        this.placePoints = [];
-        // One-shot: return to cursor (setActiveTool fires the notify).
-        this.setActiveTool("cursor");
-        this._redraw();
+      if (this.mode === "placing" && this.activeTool) {
+        const pt = this.fromPx(x, y);
+        if (!pt) return;
+        this.placePoints.push(pt);
+        if (this.placePoints.length >= this.activeTool.pointsNeeded) {
+          // Spec: discard zero-length drawings (two clicks at the same point).
+          if (this.placePoints.length >= 2) {
+            const p0 = this.placePoints[0];
+            const pN = this.placePoints[this.placePoints.length - 1];
+            if (p0.time === pN.time && p0.price === pN.price) {
+              this.placePoints = [];
+              this.setActiveTool("cursor");
+              return;
+            }
+          }
+          const drawing = {
+            id: util.newId(),
+            tool: this.activeTool.id,
+            points: this.placePoints.slice(),
+            style: { ...this.activeTool.defaultStyle },
+            scope: { ...this.activeTool.defaultScope },
+            z: this.drawings.length,
+            createdAt: Math.floor(Date.now() / 1000),
+          };
+          this.drawings.push(drawing);
+          this.save();
+          this.placePoints = [];
+          // setActiveTool fires _notifyToolChange itself.
+          this.setActiveTool("cursor");
+          this._redraw();
+        }
+        return;
       }
+
+      // Cursor mode: hit-test against drawings (top-z first)
+      const sorted = this.drawings.slice().sort((a, b) => (b.z || 0) - (a.z || 0));
+      for (const d of sorted) {
+        const def = TOOL_DEFS_BY_ID[d.tool];
+        if (def && def.hitTest && def.hitTest(d, x, y, this)) {
+          this.select(d.id);
+          return;
+        }
+      }
+      this.deselect();
     }
 
     setSymbol(source, symbol, timeframe) {

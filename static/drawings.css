@@ -40,3 +40,52 @@
 /* When the pane is in "floating palette" mode, the left toolbar is hidden
  * and the toolbar's contents float instead. Added in a later task. */
 .pane.draw-floating .draw-toolbar { display: none; }
+
+.draw-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: grab;
+}
+.draw-handle.endpoint {
+  background: #fff;
+  border: 2px solid var(--accent);
+}
+.draw-handle.mid {
+  width: 9px;
+  height: 9px;
+  background: var(--accent);
+  opacity: 0.9;
+  cursor: move;
+}
+.draw-handle:hover {
+  background: var(--accent);
+  border: 2px solid #fff;
+}
+
+.draw-mini-toolbar {
+  position: absolute;
+  transform: translate(-50%, 0);
+  background: rgba(21, 26, 35, 0.95);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px;
+  display: flex;
+  gap: 1px;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  z-index: 6;
+}
+.dmt-btn {
+  width: 22px; height: 22px;
+  background: transparent; border: none;
+  color: var(--text); font-size: 11px;
+  cursor: pointer; border-radius: 3px;
+  font-family: inherit;
+}
+.dmt-btn:hover { background: var(--accent); }
+.dmt-btn.danger { color: var(--down); }
