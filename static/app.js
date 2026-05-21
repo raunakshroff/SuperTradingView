@@ -282,6 +282,15 @@ class Pane {
       });
     }
 
+    const undoBtn = this.root.querySelector('.draw-tool[data-action="undo"]');
+    if (undoBtn) {
+      undoBtn.addEventListener("click", () => this.drawingLayer.undo());
+    }
+    const eraseBtn = this.root.querySelector('.draw-tool[data-action="erase"]');
+    if (eraseBtn) {
+      eraseBtn.addEventListener("click", () => this.drawingLayer.eraseAll());
+    }
+
     this.drawToggleBtn = this.root.querySelector('[data-action="draw-toggle"]');
     this.floatingPalette = this.root.querySelector(".draw-floating-palette");
 

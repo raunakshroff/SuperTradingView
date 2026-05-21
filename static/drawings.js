@@ -809,6 +809,7 @@
     sub: null,
     deleteBtn: null,
     current: null,   // { drawing, layer }
+    _before: null,   // snapshot of drawing at open(), for undo entry
 
     ensure() {
       if (this.el) return;
@@ -823,6 +824,10 @@
       this.deleteBtn.addEventListener("click", () => {
         if (!this.current) return;
         const { drawing, layer } = this.current;
+        // Record the delete in history so Ctrl+Z restores the drawing.
+        layer._pushHistory({ kind: "delete", before: layer._snap(drawing), after: null });
+        // Discard the pending update entry (we're deleting, not editing).
+        this._before = null;
         layer.drawings = layer.drawings.filter((x) => x.id !== drawing.id);
         layer.save();
         layer.deselect();
@@ -838,6 +843,7 @@
       this.ensure();
       if (!this.el) return;
       this.current = { drawing, layer };
+      this._before = layer._snap(drawing);
       const def = TOOL_DEFS_BY_ID[drawing.tool];
       this.sub.textContent = def ? def.name : drawing.tool;
       this._render();
@@ -846,6 +852,14 @@
 
     close() {
       if (!this.el) return;
+      // Commit any pending edit as a single history entry on close.
+      if (this.current && this._before) {
+        const { drawing, layer } = this.current;
+        if (JSON.stringify(this._before) !== JSON.stringify(drawing)) {
+          layer._pushHistory({ kind: "update", before: this._before, after: layer._snap(drawing) });
+        }
+        this._before = null;
+      }
       this.el.hidden = true;
       this.current = null;
     },
@@ -1048,6 +1062,11 @@
       this._onVisRange = null;
       this._onKeyDown = null;
 
+      // Undo / redo history (per pane, in-memory only).
+      this.history = [];        // { kind: "create"|"update"|"delete", before, after }
+      this.histPos = 0;         // index of next push; also the undo cursor
+      this.maxHist = PrefsStore.get().undoDepth || 50;
+
       // Defer DOM attach until the pane HTML element exists (v5 layout pass).
       requestAnimationFrame(() => this._attach());
     }
@@ -1084,7 +1103,16 @@
       this.wrapper.appendChild(this.handleHost);
       paneEl.appendChild(this.wrapper);
 
-      this.wrapper.addEventListener("click", (ev) => this._onClick(ev));
+      this.wrapper.addEventListener("click", (ev) => {
+        DrawingLayer._activeLayer = this;
+        this._onClick(ev);
+      });
+      // Also mark active on pointerdown so drag-initiating clicks on handles
+      // (which stop propagation before bubbling to the click listener) still
+      // mark this layer as the most-recently-interacted.
+      this.wrapper.addEventListener("pointerdown", () => {
+        DrawingLayer._activeLayer = this;
+      });
 
       // Cursor mode must remain interactive so clicks can hit-test for selection.
       this._setOverlayInteractive(true);
@@ -1096,9 +1124,35 @@
 
       this._onKeyDown = (ev) => {
         if (this._destroyed) return;
-        if (!this.selectedId) return;
         // Don't hijack typing in form controls
         if (ev.target && /INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
+
+        // Ctrl/Cmd + Z (undo) and Ctrl/Cmd + Y / Shift+Z (redo).
+        // Only the most-recently-active layer handles them; the
+        // module-level DrawingLayer._activeLayer is set whenever any
+        // layer's overlay receives a click. For the common 1-pane case
+        // this picks the only layer; for multi-pane it picks whichever
+        // the user last interacted with.
+        const isUndo = (ev.ctrlKey || ev.metaKey) && !ev.shiftKey && ev.key.toLowerCase() === "z";
+        const isRedo = (ev.ctrlKey || ev.metaKey) && (
+          ev.key.toLowerCase() === "y" ||
+          (ev.key.toLowerCase() === "z" && ev.shiftKey)
+        );
+        if (isUndo || isRedo) {
+          // Route to the most-recently-interacted layer. Fall back to "this"
+          // if nothing has been clicked yet (first action after boot).
+          const active = DrawingLayer._activeLayer || this;
+          if (active !== this) return;
+          // Mark this layer active going forward (so the next keypress without
+          // any new click also routes here, not to whichever other layer was
+          // registered later).
+          DrawingLayer._activeLayer = this;
+          ev.preventDefault();
+          if (isUndo) this.undo(); else this.redo();
+          return;
+        }
+
+        if (!this.selectedId) return;
         if (ev.key === "Escape") {
           this.deselect();
           ev.stopPropagation();
@@ -1251,10 +1305,13 @@
         ev.preventDefault();
         ev.stopPropagation();
         try { el.setPointerCapture(ev.pointerId); } catch (_e) { /* not always supported */ }
+        const before = this._snap(drawing);
+        let moved = false;
         const rect = this.wrapper.getBoundingClientRect();
         let lastX = ev.clientX - rect.left;
         let lastY = ev.clientY - rect.top;
         const onMove = (mv) => {
+          moved = true;
           const x = mv.clientX - rect.left;
           const y = mv.clientY - rect.top;
           if (handle.kind === "mid" && def.moveAll) {
@@ -1278,7 +1335,10 @@
           window.removeEventListener("pointermove", onMove);
           window.removeEventListener("pointerup", onUp);
           window.removeEventListener("pointercancel", onUp);
-          this.save();
+          if (moved) {
+            this._pushHistory({ kind: "update", before, after: this._snap(drawing) });
+            this.save();
+          }
         };
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", onUp);
@@ -1308,6 +1368,7 @@
       const d = this.drawings.find((x) => x.id === this.selectedId);
       if (!d) return;
       if (act === "del") {
+        this._pushHistory({ kind: "delete", before: this._snap(d), after: null });
         this.drawings = this.drawings.filter((x) => x.id !== d.id);
         this.selectedId = null;
         this.save();
@@ -1322,11 +1383,14 @@
           z: this.drawings.length,
         };
         this.drawings.push(copy);
+        this._pushHistory({ kind: "create", before: null, after: this._snap(copy) });
         this.save();
         this.select(copy.id);
         this._redraw();
       } else if (act === "top") {
+        const before = this._snap(d);
         d.z = Math.max(...this.drawings.map((x) => x.z || 0)) + 1;
+        this._pushHistory({ kind: "update", before, after: this._snap(d) });
         this.save();
         this._redraw();
       } else if (act === "edit") {
@@ -1383,6 +1447,7 @@
               createdAt: Math.floor(Date.now() / 1000),
             };
             this.drawings.push(drawing);
+            this._pushHistory({ kind: "create", before: null, after: this._snap(drawing) });
             this.save();
             // setActiveTool fires _notifyToolChange itself.
             this.setActiveTool("cursor");
@@ -1419,7 +1484,72 @@
       this.activeTool = null;
       this.placePoints = [];
       this.selectedId = null;
+      // Undo history is per-pane and per-symbol — clear it on symbol change
+      // so undo doesn't try to operate on drawings that no longer belong.
+      this.history = [];
+      this.histPos = 0;
       this.load();
+      this._redraw();
+    }
+
+    // --- Undo / redo / erase-all ----------------------------------------
+
+    _snap(d) { return JSON.parse(JSON.stringify(d)); }
+
+    _pushHistory(entry) {
+      // Trim any forward-history when a new action is taken after an undo.
+      if (this.histPos < this.history.length) {
+        this.history.length = this.histPos;
+      }
+      this.history.push(entry);
+      // Refresh max from prefs in case the user just changed it
+      this.maxHist = PrefsStore.get().undoDepth || 50;
+      while (this.history.length > this.maxHist) {
+        this.history.shift();
+      }
+      this.histPos = this.history.length;
+    }
+
+    undo() {
+      if (this.histPos === 0) return;
+      const entry = this.history[--this.histPos];
+      if (entry.kind === "create") {
+        this.drawings = this.drawings.filter((d) => d.id !== entry.after.id);
+      } else if (entry.kind === "delete") {
+        this.drawings.push(this._snap(entry.before));
+      } else if (entry.kind === "update") {
+        const i = this.drawings.findIndex((d) => d.id === entry.after.id);
+        if (i >= 0) this.drawings[i] = this._snap(entry.before);
+      }
+      this.save();
+      this.selectedId = null;
+      this._redraw();
+    }
+
+    redo() {
+      if (this.histPos >= this.history.length) return;
+      const entry = this.history[this.histPos++];
+      if (entry.kind === "create") {
+        this.drawings.push(this._snap(entry.after));
+      } else if (entry.kind === "delete") {
+        this.drawings = this.drawings.filter((d) => d.id !== entry.before.id);
+      } else if (entry.kind === "update") {
+        const i = this.drawings.findIndex((d) => d.id === entry.after.id);
+        if (i >= 0) this.drawings[i] = this._snap(entry.after);
+      }
+      this.save();
+      this._redraw();
+    }
+
+    eraseAll() {
+      if (this.drawings.length === 0) return;
+      if (!confirm(`Delete all ${this.drawings.length} drawings on this pane?`)) return;
+      for (const d of this.drawings.slice()) {
+        this._pushHistory({ kind: "delete", before: this._snap(d), after: null });
+      }
+      this.drawings = [];
+      this.selectedId = null;
+      this.save();
       this._redraw();
     }
 
@@ -1441,8 +1571,14 @@
         this.wrapper.parentNode.removeChild(this.wrapper);
       }
       this.wrapper = this.svg = this.handleHost = null;
+      if (DrawingLayer._activeLayer === this) DrawingLayer._activeLayer = null;
     }
   }
+
+  // Static: the most-recently-interacted DrawingLayer instance. Used to
+  // route global Ctrl+Z / Ctrl+Y to the right pane when multiple panes
+  // exist. Set on any pointerdown/click in a layer's overlay.
+  DrawingLayer._activeLayer = null;
 
   window.Drawings = { DrawingStore, PrefsStore, DrawingLayer, TOOL_DEFS, StyleModal, SettingsPopover, util };
 })();
