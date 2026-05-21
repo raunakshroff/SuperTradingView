@@ -953,6 +953,66 @@
     },
   };
 
+  const SettingsPopover = {
+    el: null,
+    _outsideClose: null,
+    open(anchorEl, onChange) {
+      if (!this.el) this.el = document.getElementById("draw-settings-pop");
+      if (!this.el) return;
+      const rect = anchorEl.getBoundingClientRect();
+      this.el.style.left = (rect.right + 6) + "px";
+      this.el.style.top  = rect.top + "px";
+      this._render(onChange);
+      this.el.hidden = false;
+      // Close when clicking outside (defer one tick so the gear-click itself doesn't close us)
+      setTimeout(() => {
+        this._outsideClose = (ev) => {
+          if (!this.el.contains(ev.target) && ev.target !== anchorEl) {
+            this.close();
+          }
+        };
+        document.addEventListener("mousedown", this._outsideClose);
+      }, 0);
+    },
+    close() {
+      if (this.el) this.el.hidden = true;
+      if (this._outsideClose) {
+        document.removeEventListener("mousedown", this._outsideClose);
+        this._outsideClose = null;
+      }
+    },
+    _render(onChange) {
+      const prefs = PrefsStore.get();
+      this.el.querySelectorAll("[data-pref-toolbar]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.prefToolbar === prefs.toolbarMode);
+        b.onclick = () => {
+          PrefsStore.set({ toolbarMode: b.dataset.prefToolbar });
+          this._render(onChange);
+          if (onChange) onChange();
+        };
+      });
+      this.el.querySelectorAll("[data-pref-snap]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.prefSnap === prefs.snapDefault);
+        b.onclick = () => {
+          PrefsStore.set({ snapDefault: b.dataset.prefSnap });
+          this._render(onChange);
+          if (onChange) onChange();
+        };
+      });
+      const undoInp = document.getElementById("dsp-undo");
+      if (undoInp) {
+        undoInp.value = prefs.undoDepth;
+        undoInp.oninput = () => {
+          const v = Number(undoInp.value);
+          if (Number.isFinite(v) && v >= 1) {
+            PrefsStore.set({ undoDepth: v });
+            if (onChange) onChange();
+          }
+        };
+      }
+    },
+  };
+
   class DrawingLayer {
     /**
      * @param {Object} opts
@@ -1384,5 +1444,5 @@
     }
   }
 
-  window.Drawings = { DrawingStore, PrefsStore, DrawingLayer, TOOL_DEFS, StyleModal, util };
+  window.Drawings = { DrawingStore, PrefsStore, DrawingLayer, TOOL_DEFS, StyleModal, SettingsPopover, util };
 })();

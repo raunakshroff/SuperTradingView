@@ -162,5 +162,28 @@
   <script src="/static/indicators.js"></script>
   <script src="/static/drawings.js"></script>
   <script src="/static/app.js"></script>
+
+  <div id="draw-settings-pop" class="draw-settings-pop" hidden>
+    <div class="dsp-header">Drawing settings</div>
+    <div class="dsp-row">
+      <span class="dsp-lbl">Toolbar</span>
+      <div class="dsp-pill-row">
+        <button class="dsp-pill" type="button" data-pref-toolbar="left">Left edge</button>
+        <button class="dsp-pill" type="button" data-pref-toolbar="floating">Floating</button>
+      </div>
+    </div>
+    <div class="dsp-row">
+      <span class="dsp-lbl">Snap to OHLC</span>
+      <div class="dsp-pill-row">
+        <button class="dsp-pill" type="button" data-pref-snap="shift">Shift held</button>
+        <button class="dsp-pill" type="button" data-pref-snap="always">Always</button>
+        <button class="dsp-pill" type="button" data-pref-snap="never">Never</button>
+      </div>
+    </div>
+    <div class="dsp-row">
+      <span class="dsp-lbl">Undo depth</span>
+      <input type="number" id="dsp-undo" min="1" max="500" step="1" class="dsm-num" style="width:64px;">
+    </div>
+  </div>
 </body>
 </html>

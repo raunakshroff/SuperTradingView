@@ -272,6 +272,16 @@ class Pane {
     });
     // Let the layer flip the toolbar back to "cursor" after a one-shot draw.
     this.drawingLayer._notifyToolChange = (id) => this._reflectActiveTool(id);
+
+    const gearBtn = this.root.querySelector('.draw-tool[data-action="settings"]');
+    if (gearBtn) {
+      gearBtn.addEventListener("click", () => {
+        Drawings.SettingsPopover.open(gearBtn, () => {
+          document.dispatchEvent(new CustomEvent("stv:drawing-prefs-changed"));
+        });
+      });
+    }
+
     this._applyPaneSizing();
     this._refreshLegends();
     this._updateFxButton();
@@ -282,6 +292,11 @@ class Pane {
       querySymbolsDebounced(this.symbolInput.value);
     });
     this.fxBtn.addEventListener("click",        () => openIndicatorsModal(this));
+
+    {
+      const prefs = Drawings.PrefsStore.get();
+      this.root.classList.toggle("draw-floating", prefs.toolbarMode === "floating");
+    }
 
     this.subscribe();
   }
@@ -1108,4 +1123,11 @@ function renderIndicatorsModal() {
   setActiveLayoutBtn(count);
   applyLayout(count);
   buildPanes(count);
+
+  document.addEventListener("stv:drawing-prefs-changed", () => {
+    const prefs = Drawings.PrefsStore.get();
+    for (const p of panes) {
+      p.root.classList.toggle("draw-floating", prefs.toolbarMode === "floating");
+    }
+  });
 })();

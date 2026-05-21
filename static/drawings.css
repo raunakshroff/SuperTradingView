@@ -171,3 +171,29 @@
   width: 140px;
   pointer-events: auto;
 }
+
+.draw-settings-pop {
+  position: fixed;
+  z-index: 999;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  padding: 8px 10px;
+  min-width: 220px;
+}
+.dsp-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.dsp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; }
+.dsp-lbl { font-size: 11px; color: var(--text); }
+.dsp-pill-row { display: flex; gap: 4px; }
+.dsp-pill {
+  padding: 2px 8px; border-radius: 3px; font-size: 10px; font-family: inherit;
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer;
+}
+.dsp-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
