@@ -707,6 +707,95 @@
         });
       },
     },
+    {
+      id: "text",
+      name: "Text",
+      pointsNeeded: 1,
+      defaultStyle: { color: "#9ccc65", width: 1, dash: "solid", opacity: 1, label: "" },
+      defaultScope: { showAllTimeframes: true, extend: "none" },
+
+      render(svg, drawing, layer) {
+        const pa = layer.toPx(drawing.points[0]);
+        if (!pa) return;
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        dot.setAttribute("cx", pa.x);
+        dot.setAttribute("cy", pa.y);
+        dot.setAttribute("r", 2);
+        dot.setAttribute("fill", drawing.style.color);
+        g.appendChild(dot);
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", pa.x + 6);
+        text.setAttribute("y", pa.y + 4);
+        text.setAttribute("fill", drawing.style.color);
+        text.setAttribute("font-size", "11");
+        text.setAttribute("opacity", drawing.style.opacity);
+        text.textContent = drawing.style.label || "(text)";
+        g.appendChild(text);
+        svg.appendChild(g);
+      },
+
+      hitTest(drawing, x, y, layer, tol = 6) {
+        const pa = layer.toPx(drawing.points[0]);
+        if (!pa) return false;
+        return x >= pa.x - tol && x <= pa.x + 80 && Math.abs(y - pa.y) <= 10;
+      },
+
+      handles(drawing, layer) {
+        const pa = layer.toPx(drawing.points[0]);
+        if (!pa) return [];
+        return [{ id: 0, kind: "endpoint", x: pa.x, y: pa.y }];
+      },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (pt) drawing.points[0] = pt;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        const px = layer.toPx(drawing.points[0]);
+        if (!px) return;
+        const np = layer.fromPx(px.x + dx, px.y + dy);
+        if (np) drawing.points[0] = np;
+      },
+
+      /**
+       * Called by DrawingLayer after the user clicks once. Prompts the user
+       * for label text via an inline DOM input anchored to the click position.
+       * Resolves with the entered text (empty string cancels).
+       */
+      promptLabel(layer, screenPt) {
+        return new Promise((resolve) => {
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.className = "draw-text-inline";
+          Object.assign(inp.style, {
+            position: "absolute",
+            left: screenPt.x + "px",
+            top: (screenPt.y - 10) + "px",
+            zIndex: 7,
+          });
+          layer.handleHost.appendChild(inp);
+          inp.focus();
+          let done = false;
+          const cleanup = () => {
+            if (inp.parentNode) inp.parentNode.removeChild(inp);
+          };
+          const finish = (val) => {
+            if (done) return;
+            done = true;
+            cleanup();
+            resolve(val);
+          };
+          inp.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") finish(inp.value);
+            else if (e.key === "Escape") finish("");
+          });
+          inp.addEventListener("blur", () => finish(inp.value));
+        });
+      },
+    },
   ];
 
   const TOOL_DEFS_BY_ID = Object.fromEntries(TOOL_DEFS.map((t) => [t.id, t]));
@@ -1212,21 +1301,39 @@
               return;
             }
           }
-          const drawing = {
-            id: util.newId(),
-            tool: this.activeTool.id,
-            points: this.placePoints.slice(),
-            style: { ...this.activeTool.defaultStyle },
-            scope: { ...this.activeTool.defaultScope },
-            z: this.drawings.length,
-            createdAt: Math.floor(Date.now() / 1000),
-          };
-          this.drawings.push(drawing);
-          this.save();
+
+          const def = this.activeTool;
+          const points = this.placePoints.slice();
           this.placePoints = [];
-          // setActiveTool fires _notifyToolChange itself.
-          this.setActiveTool("cursor");
-          this._redraw();
+
+          const commit = (labelText) => {
+            if (def.id === "text" && labelText === "") {
+              // empty cancel — don't commit a label-less text drawing
+              this.setActiveTool("cursor");
+              return;
+            }
+            const drawing = {
+              id: util.newId(),
+              tool: def.id,
+              points,
+              style: { ...def.defaultStyle,
+                ...(labelText !== undefined ? { label: labelText } : {}) },
+              scope: { ...def.defaultScope },
+              z: this.drawings.length,
+              createdAt: Math.floor(Date.now() / 1000),
+            };
+            this.drawings.push(drawing);
+            this.save();
+            // setActiveTool fires _notifyToolChange itself.
+            this.setActiveTool("cursor");
+            this._redraw();
+          };
+
+          if (def.id === "text" && def.promptLabel) {
+            def.promptLabel(this, { x, y }).then(commit);
+          } else {
+            commit(undefined);
+          }
         }
         return;
       }
