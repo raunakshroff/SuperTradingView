@@ -43,6 +43,28 @@ A local trading dashboard. Watch up to 8 live charts side-by-side, each with its
 
 ---
 
+## Drawing Tools
+
+Each pane has a left-edge toolbar (toggle to floating palette in settings) with 9 drawing tools plus undo/erase utilities:
+
+| Category | Tools |
+|---|---|
+| Lines | Trendline, Horizontal line, Vertical line |
+| Bands & Channels | Rectangle / zone, Parallel channel |
+| Levels | Fibonacci retracement |
+| Arcs | Arc |
+| Measurement | Measurement ruler (Δprice / Δ% / bars / Δtime) |
+| Annotation | Text |
+
+- **Shift-to-snap** — hold Shift while clicking to snap endpoints to the nearest OHLC of the targeted candle. Default behaviour is configurable in the ⚙ settings popover (Shift held / Always / Never).
+- **Selection** — click any drawing to select it; circular handles appear (drag endpoints to reshape, drag the mid handle to move the whole shape), plus a floating mini-toolbar (✏ edit / ⎘ duplicate / ↑ bring-to-front / × delete).
+- **Style modal** — colour, line width, dash pattern, opacity, label text, and extend direction per drawing.
+- **Per-(symbol, source) persistence** — drawings follow the symbol across pane changes and timeframe switches; they store absolute time/price coordinates and re-project on every redraw.
+- **Undo / redo** — `Ctrl+Z` / `Ctrl+Y` (also `Ctrl+Shift+Z`), 50-entry history per pane (configurable in settings). Per-pane "↺" toolbar button and "×" erase-all (with confirm) also wired.
+- **Toolbar mode** — switch between fixed left-edge toolbar and a floating-palette mode (✏ in the pane header opens/closes the palette).
+
+---
+
 ## UI / UX
 
 ### Top bar
@@ -90,9 +112,11 @@ SuperTradingView/
 ├── symbols.json        # Curated quick-load list; live search supplements via Hyperliquid + Yahoo
 ├── requirements.txt    # flask, yfinance, requests
 └── static/
-    ├── index.html      # Topbar, grid, pane template, indicators modal
+    ├── index.html      # Topbar, grid, pane template, indicators modal, style modal, settings popover
     ├── style.css       # Dark theme, grid layout, modal, legend chips, flash animations
     ├── indicators.js   # 33 indicator defs with build / compute / apply per indicator
+    ├── drawings.js     # 9 drawing tool defs + DrawingLayer + DrawingStore + StyleModal + SettingsPopover
+    ├── drawings.css    # Toolbar, handles, mini-toolbar, style modal, settings popover
     └── app.js          # Pane class, HL WS multiplexer, SSE client, modal, legends, debounced symbol search
 ```
 
