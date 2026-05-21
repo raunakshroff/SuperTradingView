@@ -465,6 +465,98 @@
         drawing.points = newPts;
       },
     },
+    {
+      id: "channel",
+      name: "Parallel channel",
+      pointsNeeded: 3,
+      defaultStyle: { color: "#9ccc65", width: 1, dash: "solid", opacity: 0.9 },
+      defaultScope: { showAllTimeframes: true, extend: "none" },
+
+      /**
+       * points[0], points[1] = base trendline (A, B)
+       * points[2]            = offset reference (C) — the parallel line passes through C
+       *                        parallel to AB.
+       */
+      render(svg, drawing, layer) {
+        const A = layer.toPx(drawing.points[0]);
+        const B = layer.toPx(drawing.points[1]);
+        const C = layer.toPx(drawing.points[2]);
+        if (!A || !B || !C) return;
+        const dx = B.x - A.x, dy = B.y - A.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len, ny = dx / len;
+        const t = (C.x - A.x) * nx + (C.y - A.y) * ny;
+        const D = { x: A.x + nx * t, y: A.y + ny * t };
+        const E = { x: B.x + nx * t, y: B.y + ny * t };
+
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+
+        const fill = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        fill.setAttribute("points", `${A.x},${A.y} ${B.x},${B.y} ${E.x},${E.y} ${D.x},${D.y}`);
+        fill.setAttribute("fill", withAlpha(drawing.style.color, 0.12 * drawing.style.opacity));
+        fill.setAttribute("stroke", "none");
+        g.appendChild(fill);
+
+        const base = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        base.setAttribute("x1", A.x); base.setAttribute("y1", A.y);
+        base.setAttribute("x2", B.x); base.setAttribute("y2", B.y);
+        base.setAttribute("stroke", drawing.style.color);
+        base.setAttribute("stroke-width", drawing.style.width);
+        base.setAttribute("stroke-opacity", drawing.style.opacity);
+        const dash = DASH_MAP[drawing.style.dash];
+        if (dash) base.setAttribute("stroke-dasharray", dash);
+        g.appendChild(base);
+
+        const par = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        par.setAttribute("x1", D.x); par.setAttribute("y1", D.y);
+        par.setAttribute("x2", E.x); par.setAttribute("y2", E.y);
+        par.setAttribute("stroke", drawing.style.color);
+        par.setAttribute("stroke-width", drawing.style.width);
+        par.setAttribute("stroke-opacity", drawing.style.opacity);
+        if (dash) par.setAttribute("stroke-dasharray", dash);
+        g.appendChild(par);
+
+        svg.appendChild(g);
+      },
+
+      hitTest(drawing, x, y, layer, tol = 5) {
+        const A = layer.toPx(drawing.points[0]);
+        const B = layer.toPx(drawing.points[1]);
+        const C = layer.toPx(drawing.points[2]);
+        if (!A || !B || !C) return false;
+        if (distPointToSegment(x, y, A.x, A.y, B.x, B.y) <= tol) return true;
+        const dx = B.x - A.x, dy = B.y - A.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len, ny = dx / len;
+        const t = (C.x - A.x) * nx + (C.y - A.y) * ny;
+        const D = { x: A.x + nx * t, y: A.y + ny * t };
+        const E = { x: B.x + nx * t, y: B.y + ny * t };
+        return distPointToSegment(x, y, D.x, D.y, E.x, E.y) <= tol;
+      },
+
+      handles(drawing, layer) {
+        const out = [];
+        drawing.points.forEach((p, i) => {
+          const px = layer.toPx(p);
+          if (px) out.push({ id: i, kind: "endpoint", x: px.x, y: px.y });
+        });
+        return out;
+      },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (pt) drawing.points[+handleId] = pt;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        drawing.points = drawing.points.map((p) => {
+          const px = layer.toPx(p);
+          if (!px) return p;
+          return layer.fromPx(px.x + dx, px.y + dy) || p;
+        });
+      },
+    },
   ];
 
   const TOOL_DEFS_BY_ID = Object.fromEntries(TOOL_DEFS.map((t) => [t.id, t]));
