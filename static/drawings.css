@@ -1,0 +1,42 @@
+/* Drawing layer styles. Loaded after style.css so theme tokens (var(--panel),
+ * var(--border), var(--accent), etc.) are available. */
+
+.draw-toolbar {
+  width: 30px;
+  background: var(--panel-2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0;
+  flex-shrink: 0;
+}
+
+.draw-tool {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  user-select: none;
+}
+.draw-tool:hover { background: var(--border); color: var(--text); }
+.draw-tool.active { background: var(--accent); color: white; }
+
+.draw-tool-sep {
+  width: 16px;
+  height: 1px;
+  background: var(--border);
+}
+
+/* When the pane is in "floating palette" mode, the left toolbar is hidden
+ * and the toolbar's contents float instead. Added in a later task. */
+.pane.draw-floating .draw-toolbar { display: none; }

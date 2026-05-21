@@ -137,6 +137,12 @@ html, body {
 .pane-header.flash-up   { background-color: var(--up-soft); }
 .pane-header.flash-down { background-color: var(--down-soft); }
 
+.pane-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
 .pane-divider {
   width: 1px;
   height: 16px;

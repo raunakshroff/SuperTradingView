@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SuperTradingView</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/drawings.css" />
   <script src="https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -88,7 +89,27 @@
         </div>
         <span class="status-badge" hidden></span>
       </div>
-      <div class="chart"></div>
+      <div class="pane-body">
+        <div class="draw-toolbar">
+          <button class="draw-tool active" type="button" data-tool="cursor" title="Select">⤤</button>
+          <div class="draw-tool-sep"></div>
+          <button class="draw-tool" type="button" data-tool="trendline" title="Trendline">╱</button>
+          <button class="draw-tool" type="button" data-tool="horizontal" title="Horizontal line">─</button>
+          <button class="draw-tool" type="button" data-tool="vertical" title="Vertical line">│</button>
+          <button class="draw-tool" type="button" data-tool="rectangle" title="Rectangle">▭</button>
+          <button class="draw-tool" type="button" data-tool="fib" title="Fibonacci">⌘</button>
+          <button class="draw-tool" type="button" data-tool="channel" title="Parallel channel">∥</button>
+          <button class="draw-tool" type="button" data-tool="arc" title="Arc">◠</button>
+          <button class="draw-tool" type="button" data-tool="ruler" title="Measurement ruler">📏</button>
+          <button class="draw-tool" type="button" data-tool="text" title="Text">T</button>
+          <div class="draw-tool-sep"></div>
+          <button class="draw-tool" type="button" data-action="undo" title="Undo (Ctrl+Z)">↺</button>
+          <button class="draw-tool" type="button" data-action="erase" title="Erase all">×</button>
+          <div class="draw-tool-sep"></div>
+          <button class="draw-tool" type="button" data-action="settings" title="Drawing settings">⚙</button>
+        </div>
+        <div class="chart"></div>
+      </div>
     </section>
   </template>
 
@@ -121,6 +142,7 @@
   </div>
 
   <script src="/static/indicators.js"></script>
+  <script src="/static/drawings.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>
