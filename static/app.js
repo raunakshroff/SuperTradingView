@@ -262,6 +262,7 @@ class Pane {
       symbol:    this.state.symbol,
       timeframe: this.state.tf,
     });
+    this.drawingLayer.getCandles = () => this.candles;
     this.toolBtns = this.root.querySelectorAll(".draw-tool[data-tool]");
     this.toolBtns.forEach((btn) => {
       btn.addEventListener("click", () => {

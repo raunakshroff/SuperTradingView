@@ -464,6 +464,30 @@
       return { time: typeof time === "number" ? time : Number(time), price };
     }
 
+    _snapPoint(pt, modifiers) {
+      const prefs = PrefsStore.get();
+      const mode = prefs.snapDefault;      // "shift" | "always" | "never"
+      const shouldSnap =
+        mode === "always" ||
+        (mode === "shift" && modifiers && modifiers.shiftKey);
+      if (!shouldSnap || !this.getCandles) return pt;
+      const candles = this.getCandles();
+      if (!candles || candles.length === 0) return pt;
+      // Find the candle whose time is closest to pt.time
+      let best = candles[0], bestDiff = Math.abs(candles[0].time - pt.time);
+      for (let i = 1; i < candles.length; i++) {
+        const d = Math.abs(candles[i].time - pt.time);
+        if (d < bestDiff) { best = candles[i]; bestDiff = d; }
+      }
+      const ohlc = [best.open, best.high, best.low, best.close];
+      let nearest = ohlc[0], minDist = Math.abs(ohlc[0] - pt.price);
+      for (let i = 1; i < ohlc.length; i++) {
+        const d = Math.abs(ohlc[i] - pt.price);
+        if (d < minDist) { nearest = ohlc[i]; minDist = d; }
+      }
+      return { time: best.time, price: nearest };
+    }
+
     load() {
       this.drawings = DrawingStore.get(this.source, this.symbol);
     }
@@ -563,9 +587,17 @@
           const x = mv.clientX - rect.left;
           const y = mv.clientY - rect.top;
           if (handle.kind === "mid" && def.moveAll) {
+            // Mid drag moves the whole shape; no snap here since dx/dy is relative.
             def.moveAll(drawing, x - lastX, y - lastY, this);
           } else if (def.moveHandle) {
-            def.moveHandle(drawing, handle.id, x, y, this);
+            const raw = this.fromPx(x, y);
+            const snapped = raw ? this._snapPoint(raw, mv) : null;
+            if (snapped) {
+              const px = this.toPx(snapped);
+              if (px) def.moveHandle(drawing, handle.id, px.x, px.y, this);
+            } else {
+              def.moveHandle(drawing, handle.id, x, y, this);
+            }
           }
           lastX = x; lastY = y;
           this._redraw();
@@ -646,7 +678,7 @@
       if (this.mode === "placing" && this.activeTool) {
         const pt = this.fromPx(x, y);
         if (!pt) return;
-        this.placePoints.push(pt);
+        this.placePoints.push(this._snapPoint(pt, ev));
         if (this.placePoints.length >= this.activeTool.pointsNeeded) {
           // Spec: discard zero-length drawings (two clicks at the same point).
           if (this.placePoints.length >= 2) {
