@@ -557,6 +557,63 @@
         });
       },
     },
+    {
+      id: "arc",
+      name: "Arc",
+      pointsNeeded: 2,
+      defaultStyle: { color: "#42a5f5", width: 1.5, dash: "solid", opacity: 1 },
+      defaultScope: { showAllTimeframes: true, extend: "none" },
+
+      render(svg, drawing, layer) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return;
+        const rx = Math.abs(pb.x - pa.x) / 2;
+        const ry = Math.abs(pb.y - pa.y) / 2 + Math.abs(pb.x - pa.x) / 4;
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", `M ${pa.x},${pa.y} A ${rx},${ry} 0 0 0 ${pb.x},${pb.y}`);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", drawing.style.color);
+        path.setAttribute("stroke-width", drawing.style.width);
+        path.setAttribute("stroke-opacity", drawing.style.opacity);
+        const dash = DASH_MAP[drawing.style.dash];
+        if (dash) path.setAttribute("stroke-dasharray", dash);
+        g.appendChild(path);
+        svg.appendChild(g);
+      },
+
+      hitTest(drawing, x, y, layer, tol = 6) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return false;
+        const x1 = Math.min(pa.x, pb.x) - tol, x2 = Math.max(pa.x, pb.x) + tol;
+        const yMin = Math.min(pa.y, pb.y) - Math.abs(pb.x - pa.x) / 4 - tol;
+        const yMax = Math.max(pa.y, pb.y) + tol;
+        return x >= x1 && x <= x2 && y >= yMin && y <= yMax;
+      },
+
+      handles(drawing, layer) {
+        return drawing.points.map((p, i) => {
+          const px = layer.toPx(p);
+          return px ? { id: i, kind: "endpoint", x: px.x, y: px.y } : null;
+        }).filter(Boolean);
+      },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (pt) drawing.points[+handleId] = pt;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        drawing.points = drawing.points.map((p) => {
+          const px = layer.toPx(p);
+          if (!px) return p;
+          return layer.fromPx(px.x + dx, px.y + dy) || p;
+        });
+      },
+    },
   ];
 
   const TOOL_DEFS_BY_ID = Object.fromEntries(TOOL_DEFS.map((t) => [t.id, t]));
