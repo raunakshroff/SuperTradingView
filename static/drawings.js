@@ -185,6 +185,127 @@
         if (newB) drawing.points[1] = newB;
       },
     },
+    {
+      id: "horizontal",
+      name: "Horizontal line",
+      pointsNeeded: 1,
+      defaultStyle: { color: "#42a5f5", width: 1, dash: "dashed", opacity: 1 },
+      defaultScope: { showAllTimeframes: true, extend: "both" },
+
+      render(svg, drawing, layer) {
+        const [a] = drawing.points;
+        const py = layer.series.priceToCoordinate(a.price);
+        if (py == null) return;
+        const w = layer.svg.getBoundingClientRect().width;
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", 0); line.setAttribute("y1", py);
+        line.setAttribute("x2", w); line.setAttribute("y2", py);
+        line.setAttribute("stroke", drawing.style.color);
+        line.setAttribute("stroke-width", drawing.style.width);
+        line.setAttribute("stroke-opacity", drawing.style.opacity);
+        const dash = DASH_MAP[drawing.style.dash];
+        if (dash) line.setAttribute("stroke-dasharray", dash);
+        g.appendChild(line);
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", w - 4);
+        label.setAttribute("y", py - 2);
+        label.setAttribute("text-anchor", "end");
+        label.setAttribute("fill", drawing.style.color);
+        label.setAttribute("font-size", "10");
+        label.textContent = drawing.style.label || (a.price >= 1000
+          ? a.price.toLocaleString(undefined, { maximumFractionDigits: 2 })
+          : a.price.toLocaleString(undefined, { maximumFractionDigits: 4 }));
+        g.appendChild(label);
+        svg.appendChild(g);
+      },
+
+      hitTest(drawing, x, y, layer, tol = 5) {
+        const py = layer.series.priceToCoordinate(drawing.points[0].price);
+        if (py == null) return false;
+        return Math.abs(y - py) <= tol;
+      },
+
+      handles(drawing, layer) {
+        const py = layer.series.priceToCoordinate(drawing.points[0].price);
+        if (py == null) return [];
+        const w = layer.svg.getBoundingClientRect().width;
+        return [{ id: 0, kind: "endpoint", x: w / 2, y: py }];
+      },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (pt) drawing.points[0].price = pt.price;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        const py = layer.series.priceToCoordinate(drawing.points[0].price);
+        if (py == null) return;
+        const newPrice = layer.series.coordinateToPrice(py + dy);
+        if (newPrice != null) drawing.points[0].price = newPrice;
+      },
+    },
+    {
+      id: "vertical",
+      name: "Vertical line",
+      pointsNeeded: 1,
+      defaultStyle: { color: "#ab47bc", width: 1, dash: "dashed", opacity: 1 },
+      defaultScope: { showAllTimeframes: true, extend: "both" },
+
+      render(svg, drawing, layer) {
+        const [a] = drawing.points;
+        const px = layer.chart.timeScale().timeToCoordinate(a.time);
+        if (px == null) return;
+        const h = layer.svg.getBoundingClientRect().height;
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", px); line.setAttribute("y1", 0);
+        line.setAttribute("x2", px); line.setAttribute("y2", h);
+        line.setAttribute("stroke", drawing.style.color);
+        line.setAttribute("stroke-width", drawing.style.width);
+        line.setAttribute("stroke-opacity", drawing.style.opacity);
+        const dash = DASH_MAP[drawing.style.dash];
+        if (dash) line.setAttribute("stroke-dasharray", dash);
+        g.appendChild(line);
+        if (drawing.style.label) {
+          const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          t.setAttribute("x", px + 4);
+          t.setAttribute("y", 14);
+          t.setAttribute("fill", drawing.style.color);
+          t.setAttribute("font-size", "10");
+          t.textContent = drawing.style.label;
+          g.appendChild(t);
+        }
+        svg.appendChild(g);
+      },
+
+      hitTest(drawing, x, y, layer, tol = 5) {
+        const px = layer.chart.timeScale().timeToCoordinate(drawing.points[0].time);
+        if (px == null) return false;
+        return Math.abs(x - px) <= tol;
+      },
+
+      handles(drawing, layer) {
+        const px = layer.chart.timeScale().timeToCoordinate(drawing.points[0].time);
+        if (px == null) return [];
+        const h = layer.svg.getBoundingClientRect().height;
+        return [{ id: 0, kind: "endpoint", x: px, y: h / 2 }];
+      },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (pt) drawing.points[0].time = pt.time;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        const px = layer.chart.timeScale().timeToCoordinate(drawing.points[0].time);
+        if (px == null) return;
+        const newTime = layer.chart.timeScale().coordinateToTime(px + dx);
+        if (newTime != null) drawing.points[0].time = typeof newTime === "number" ? newTime : Number(newTime);
+      },
+    },
   ];
 
   const TOOL_DEFS_BY_ID = Object.fromEntries(TOOL_DEFS.map((t) => [t.id, t]));
