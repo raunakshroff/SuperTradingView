@@ -109,13 +109,24 @@
         const pa = layer.toPx(a);
         const pb = layer.toPx(b);
         if (!pa || !pb) return;
+        const rect = layer.svg.getBoundingClientRect();
+        let x1 = pa.x, y1 = pa.y, x2 = pb.x, y2 = pb.y;
+        const dx = x2 - x1, dy = y2 - y1;
+        const slope = dx === 0 ? Infinity : dy / dx;
+        const ext = drawing.scope.extend || "none";
+        if (slope !== Infinity && (ext === "left" || ext === "both")) {
+          const ny = y1 - slope * x1;
+          x1 = 0; y1 = ny;
+        }
+        if (slope !== Infinity && (ext === "right" || ext === "both")) {
+          const ny = y2 + slope * (rect.width - x2);
+          x2 = rect.width; y2 = ny;
+        }
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("data-drawing-id", drawing.id);
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", pa.x);
-        line.setAttribute("y1", pa.y);
-        line.setAttribute("x2", pb.x);
-        line.setAttribute("y2", pb.y);
+        line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2); line.setAttribute("y2", y2);
         line.setAttribute("stroke", drawing.style.color);
         line.setAttribute("stroke-width", drawing.style.width);
         line.setAttribute("stroke-opacity", drawing.style.opacity);
@@ -123,6 +134,15 @@
         const dash = DASH_MAP[drawing.style.dash];
         if (dash) line.setAttribute("stroke-dasharray", dash);
         g.appendChild(line);
+        if (drawing.style.label) {
+          const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          t.setAttribute("x", pb.x + 6);
+          t.setAttribute("y", pb.y - 4);
+          t.setAttribute("fill", drawing.style.color);
+          t.setAttribute("font-size", "10");
+          t.textContent = drawing.style.label;
+          g.appendChild(t);
+        }
         svg.appendChild(g);
       },
 
@@ -168,6 +188,159 @@
   ];
 
   const TOOL_DEFS_BY_ID = Object.fromEntries(TOOL_DEFS.map((t) => [t.id, t]));
+
+  const DASH_OPTIONS = ["solid", "dashed", "dotted", "dashdot"];
+  const EXTEND_OPTIONS = ["none", "left", "right", "both"];
+
+  const StyleModal = {
+    el: null,
+    body: null,
+    sub: null,
+    deleteBtn: null,
+    current: null,   // { drawing, layer }
+
+    ensure() {
+      if (this.el) return;
+      this.el = document.getElementById("draw-style-modal");
+      this.body = document.getElementById("dsm-body");
+      this.sub = document.getElementById("dsm-sub");
+      this.deleteBtn = document.getElementById("dsm-delete");
+      if (!this.el) return;
+      this.el.addEventListener("click", (ev) => {
+        if (ev.target.matches("[data-close]")) this.close();
+      });
+      this.deleteBtn.addEventListener("click", () => {
+        if (!this.current) return;
+        const { drawing, layer } = this.current;
+        layer.drawings = layer.drawings.filter((x) => x.id !== drawing.id);
+        layer.save();
+        layer.deselect();
+        layer._redraw();
+        this.close();
+      });
+      document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape" && !this.el.hidden) this.close();
+      });
+    },
+
+    open(drawing, layer) {
+      this.ensure();
+      if (!this.el) return;
+      this.current = { drawing, layer };
+      const def = TOOL_DEFS_BY_ID[drawing.tool];
+      this.sub.textContent = def ? def.name : drawing.tool;
+      this._render();
+      this.el.hidden = false;
+    },
+
+    close() {
+      if (!this.el) return;
+      this.el.hidden = true;
+      this.current = null;
+    },
+
+    _render() {
+      const { drawing } = this.current;
+      this.body.innerHTML = "";
+
+      const rows = [
+        this._row("Color",   this._colorInput(drawing)),
+        this._row("Width",   this._numberInput(drawing, "width", 1, 8, 1)),
+        this._row("Dash",    this._pillRow(drawing, "dash", DASH_OPTIONS,
+          { solid: "──", dashed: "- -", dotted: "···", dashdot: "─·" })),
+        this._row("Opacity", this._numberInput(drawing, "opacity", 0.1, 1, 0.1)),
+        this._row("Label",   this._textInput(drawing, "label")),
+        this._row("Extend",  this._pillRow(drawing, "extend", EXTEND_OPTIONS,
+          { none: "none", left: "←", right: "→", both: "↔" }, "scope")),
+      ];
+      rows.forEach((r) => this.body.appendChild(r));
+    },
+
+    _row(label, control) {
+      const r = document.createElement("div");
+      r.className = "dsm-row";
+      const l = document.createElement("span");
+      l.className = "dsm-lbl";
+      l.textContent = label;
+      r.append(l, control);
+      return r;
+    },
+
+    _colorInput(drawing) {
+      const wrap = document.createElement("span");
+      wrap.style.display = "flex";
+      wrap.style.alignItems = "center";
+      wrap.style.gap = "6px";
+      const inp = document.createElement("input");
+      inp.type = "color";
+      inp.className = "dsm-color";
+      inp.value = drawing.style.color;
+      const label = document.createElement("span");
+      label.style.fontSize = "11px";
+      label.style.color = "var(--text)";
+      label.textContent = inp.value;
+      inp.addEventListener("input", () => {
+        drawing.style.color = inp.value;
+        label.textContent = inp.value;
+        this._apply();
+      });
+      wrap.append(inp, label);
+      return wrap;
+    },
+
+    _numberInput(drawing, key, min, max, step) {
+      const inp = document.createElement("input");
+      inp.type = "number";
+      inp.className = "dsm-num";
+      inp.min = min; inp.max = max; inp.step = step;
+      inp.value = drawing.style[key];
+      inp.addEventListener("input", () => {
+        const v = Number(inp.value);
+        if (!Number.isFinite(v)) return;
+        drawing.style[key] = v;
+        this._apply();
+      });
+      return inp;
+    },
+
+    _textInput(drawing, key) {
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.className = "dsm-text";
+      inp.value = drawing.style[key] || "";
+      inp.addEventListener("input", () => {
+        drawing.style[key] = inp.value;
+        this._apply();
+      });
+      return inp;
+    },
+
+    _pillRow(drawing, key, options, glyphs, group = "style") {
+      const wrap = document.createElement("div");
+      wrap.className = "dsm-pill-row";
+      options.forEach((opt) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "dsm-pill";
+        if (drawing[group][key] === opt) b.classList.add("active");
+        b.textContent = glyphs[opt] || opt;
+        b.title = opt;
+        b.addEventListener("click", () => {
+          drawing[group][key] = opt;
+          this._apply();
+          this._render();
+        });
+        wrap.appendChild(b);
+      });
+      return wrap;
+    },
+
+    _apply() {
+      const { layer } = this.current;
+      layer.save();
+      layer._redraw();
+    },
+  };
 
   class DrawingLayer {
     /**
@@ -453,8 +626,9 @@
         d.z = Math.max(...this.drawings.map((x) => x.z || 0)) + 1;
         this.save();
         this._redraw();
+      } else if (act === "edit") {
+        StyleModal.open(d, this);
       }
-      // "edit" wired in the Style Modal task (Task 6)
     }
 
     _setCursor(c) { if (this.wrapper) this.wrapper.style.cursor = c; }
@@ -549,5 +723,5 @@
     }
   }
 
-  window.Drawings = { DrawingStore, PrefsStore, DrawingLayer, TOOL_DEFS, util };
+  window.Drawings = { DrawingStore, PrefsStore, DrawingLayer, TOOL_DEFS, StyleModal, util };
 })();

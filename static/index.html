@@ -141,6 +141,24 @@
     </div>
   </div>
 
+  <div id="draw-style-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel" style="width: min(360px, 92vw); max-height: 70vh;">
+      <div class="modal-header">
+        <span class="modal-title">Drawing style</span>
+        <span class="modal-sub" id="dsm-sub"></span>
+        <button class="modal-close" type="button" data-close>×</button>
+      </div>
+      <div class="modal-body" id="dsm-body"></div>
+      <div class="modal-footer">
+        <button id="dsm-delete" type="button" class="btn-danger">Delete</button>
+        <div>
+          <button type="button" class="btn-secondary" data-close>Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/static/indicators.js"></script>
   <script src="/static/drawings.js"></script>
   <script src="/static/app.js"></script>
