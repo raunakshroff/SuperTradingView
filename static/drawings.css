@@ -143,3 +143,18 @@
   background: var(--panel-2); border: 1px solid var(--border); border-radius: 3px;
   padding: 4px 6px; font-size: 11px; color: var(--text); width: 100%;
 }
+
+.draw-ruler-readout {
+  background: rgba(21, 26, 35, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 10px;
+  color: var(--text);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.draw-ruler-readout .line1 { font-weight: 600; }
+.draw-ruler-readout .line2 { color: var(--text-dim); font-size: 9px; margin-top: 1px; }

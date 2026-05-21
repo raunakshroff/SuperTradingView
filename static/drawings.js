@@ -614,6 +614,99 @@
         });
       },
     },
+    {
+      id: "ruler",
+      name: "Measurement ruler",
+      pointsNeeded: 2,
+      defaultStyle: { color: "#26c6da", width: 1, dash: "solid", opacity: 1 },
+      defaultScope: { showAllTimeframes: true, extend: "none" },
+
+      render(svg, drawing, layer) {
+        const a = drawing.points[0], b = drawing.points[1];
+        const pa = layer.toPx(a), pb = layer.toPx(b);
+        if (!pa || !pb) return;
+        const x = Math.min(pa.x, pb.x), y = Math.min(pa.y, pb.y);
+        const w = Math.abs(pb.x - pa.x), h = Math.abs(pb.y - pa.y);
+        const isUp = b.price >= a.price;
+        const color = isUp ? "#26a69a" : "#ef5350";
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+
+        const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        r.setAttribute("x", x); r.setAttribute("y", y);
+        r.setAttribute("width", w); r.setAttribute("height", h);
+        r.setAttribute("fill", withAlpha(color, 0.15));
+        r.setAttribute("stroke", color);
+        r.setAttribute("stroke-width", 1);
+        r.setAttribute("stroke-dasharray", "3,3");
+        g.appendChild(r);
+
+        // Compute readout numbers
+        const dPrice = b.price - a.price;
+        const dPct = a.price === 0 ? 0 : (dPrice / a.price) * 100;
+        const dTime = Math.abs(b.time - a.time);
+        const tfSec = ({ "1m":60, "5m":300, "15m":900, "1h":3600, "4h":14400, "1d":86400 })[layer.timeframe] || 60;
+        const bars = Math.round(dTime / tfSec);
+        const dHours = dTime / 3600;
+        const tStr = dHours >= 24 ? `${(dHours/24).toFixed(1)}d`
+                   : dHours >= 1  ? `${dHours.toFixed(1)}h`
+                                  : `${Math.round(dTime/60)}m`;
+
+        // Render readout via foreignObject so we can use HTML styling
+        const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+        fo.setAttribute("x", (pa.x + pb.x) / 2 - 70);
+        fo.setAttribute("y", Math.min(pa.y, pb.y) - 38);
+        fo.setAttribute("width", 140);
+        fo.setAttribute("height", 36);
+        const div = document.createElement("div");
+        div.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+        div.className = "draw-ruler-readout";
+        // Build line1 + line2 via DOM (avoid innerHTML for user-derived numbers — minor XSS hygiene)
+        const line1 = document.createElement("div");
+        line1.className = "line1";
+        line1.textContent = `${dPrice >= 0 ? "+" : ""}${dPrice.toFixed(2)} (${dPct >= 0 ? "+" : ""}${dPct.toFixed(2)}%)`;
+        const line2 = document.createElement("div");
+        line2.className = "line2";
+        line2.textContent = `${bars} bar${bars === 1 ? "" : "s"} · ${tStr}`;
+        div.append(line1, line2);
+        fo.appendChild(div);
+        g.appendChild(fo);
+
+        svg.appendChild(g);
+      },
+
+      hitTest(drawing, x, y, layer, tol = 4) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return false;
+        const x1 = Math.min(pa.x, pb.x) - tol, x2 = Math.max(pa.x, pb.x) + tol;
+        const y1 = Math.min(pa.y, pb.y) - tol, y2 = Math.max(pa.y, pb.y) + tol;
+        return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+      },
+
+      handles(drawing, layer) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return [];
+        return [
+          { id: 0, kind: "endpoint", x: pa.x, y: pa.y },
+          { id: 1, kind: "endpoint", x: pb.x, y: pb.y },
+        ];
+      },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (pt) drawing.points[+handleId] = pt;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        drawing.points = drawing.points.map((p) => {
+          const px = layer.toPx(p);
+          if (!px) return p;
+          return layer.fromPx(px.x + dx, px.y + dy) || p;
+        });
+      },
+    },
   ];
 
   const TOOL_DEFS_BY_ID = Object.fromEntries(TOOL_DEFS.map((t) => [t.id, t]));
