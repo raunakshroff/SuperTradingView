@@ -96,6 +96,13 @@
     dashdot: "8,4,2,4",
   };
 
+  function withAlpha(hex, a) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
   const TOOL_DEFS = [
     {
       id: "trendline",
@@ -304,6 +311,70 @@
         if (px == null) return;
         const newTime = layer.chart.timeScale().coordinateToTime(px + dx);
         if (newTime != null) drawing.points[0].time = typeof newTime === "number" ? newTime : Number(newTime);
+      },
+    },
+    {
+      id: "rectangle",
+      name: "Rectangle",
+      pointsNeeded: 2,
+      defaultStyle: { color: "#26a69a", width: 1, dash: "solid", opacity: 1 },
+      defaultScope: { showAllTimeframes: true, extend: "none" },
+
+      render(svg, drawing, layer) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return;
+        const x = Math.min(pa.x, pb.x), y = Math.min(pa.y, pb.y);
+        const w = Math.abs(pb.x - pa.x), h = Math.abs(pb.y - pa.y);
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+        const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        r.setAttribute("x", x); r.setAttribute("y", y);
+        r.setAttribute("width", w); r.setAttribute("height", h);
+        r.setAttribute("fill", withAlpha(drawing.style.color, 0.18 * drawing.style.opacity));
+        r.setAttribute("stroke", drawing.style.color);
+        r.setAttribute("stroke-width", drawing.style.width);
+        r.setAttribute("stroke-opacity", drawing.style.opacity);
+        const dash = DASH_MAP[drawing.style.dash];
+        if (dash) r.setAttribute("stroke-dasharray", dash);
+        g.appendChild(r);
+        svg.appendChild(g);
+      },
+
+      hitTest(drawing, x, y, layer, tol = 4) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return false;
+        const x1 = Math.min(pa.x, pb.x) - tol, x2 = Math.max(pa.x, pb.x) + tol;
+        const y1 = Math.min(pa.y, pb.y) - tol, y2 = Math.max(pa.y, pb.y) + tol;
+        return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+      },
+
+      handles(drawing, layer) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return [];
+        return [
+          { id: 0,   kind: "endpoint", x: pa.x, y: pa.y },
+          { id: 1,   kind: "endpoint", x: pb.x, y: pb.y },
+          { id: "mid", kind: "mid",    x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 },
+        ];
+      },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (!pt) return;
+        if (handleId == 0) drawing.points[0] = pt;
+        else if (handleId == 1) drawing.points[1] = pt;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        const newPts = drawing.points.map((p) => {
+          const px = layer.toPx(p);
+          if (!px) return p;
+          return layer.fromPx(px.x + dx, px.y + dy) || p;
+        });
+        drawing.points = newPts;
       },
     },
   ];
