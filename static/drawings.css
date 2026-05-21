@@ -197,3 +197,38 @@
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer;
 }
 .dsp-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+.ph-draw-toggle {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  display: none;            /* hidden when toolbar mode is "left" */
+}
+.pane.draw-floating .ph-draw-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ph-draw-toggle.active { border-color: var(--accent); color: var(--accent); }
+
+.draw-floating-palette {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  background: rgba(21, 26, 35, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px;
+  display: flex;
+  gap: 2px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  flex-wrap: wrap;
+  max-width: 280px;
+}
+.pane:not(.draw-floating) .draw-floating-palette { display: none; }

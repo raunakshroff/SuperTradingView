@@ -282,6 +282,37 @@ class Pane {
       });
     }
 
+    this.drawToggleBtn = this.root.querySelector('[data-action="draw-toggle"]');
+    this.floatingPalette = this.root.querySelector(".draw-floating-palette");
+
+    // Mirror every toolbar child (tools, actions, separators) into the floating palette.
+    // Each clone forwards its click to the original button so all wiring carries over
+    // (active state, settings popover, future undo/erase from Task 17).
+    if (this.floatingPalette) {
+      const toolbar = this.root.querySelector(".draw-toolbar");
+      if (toolbar) {
+        for (const src of Array.from(toolbar.children)) {
+          const clone = src.cloneNode(true);
+          // Only buttons need a click forwarder; separators are inert
+          if (src.tagName === "BUTTON") {
+            clone.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              src.click();
+            });
+          }
+          this.floatingPalette.appendChild(clone);
+        }
+      }
+    }
+
+    if (this.drawToggleBtn) {
+      this.drawToggleBtn.addEventListener("click", () => {
+        const showing = !this.floatingPalette.hidden;
+        this.floatingPalette.hidden = showing;
+        this.drawToggleBtn.classList.toggle("active", !showing);
+      });
+    }
+
     this._applyPaneSizing();
     this._refreshLegends();
     this._updateFxButton();
@@ -604,9 +635,12 @@ class Pane {
   }
 
   _reflectActiveTool(id) {
-    this.toolBtns.forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.tool === id);
-    });
+    this.toolBtns.forEach((btn) => btn.classList.toggle("active", btn.dataset.tool === id));
+    if (this.floatingPalette) {
+      this.floatingPalette.querySelectorAll(".draw-tool[data-tool]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tool === id);
+      });
+    }
   }
 
   _refreshLegends() {
