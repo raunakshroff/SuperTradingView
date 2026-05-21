@@ -103,6 +103,8 @@
     return `rgba(${r},${g},${b},${a})`;
   }
 
+  const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+
   const TOOL_DEFS = [
     {
       id: "trendline",
@@ -358,6 +360,92 @@
           { id: 0,   kind: "endpoint", x: pa.x, y: pa.y },
           { id: 1,   kind: "endpoint", x: pb.x, y: pb.y },
           { id: "mid", kind: "mid",    x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 },
+        ];
+      },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (!pt) return;
+        if (handleId == 0) drawing.points[0] = pt;
+        else if (handleId == 1) drawing.points[1] = pt;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        const newPts = drawing.points.map((p) => {
+          const px = layer.toPx(p);
+          if (!px) return p;
+          return layer.fromPx(px.x + dx, px.y + dy) || p;
+        });
+        drawing.points = newPts;
+      },
+    },
+    {
+      id: "fib",
+      name: "Fibonacci retracement",
+      pointsNeeded: 2,
+      defaultStyle: { color: "#ec407a", width: 1, dash: "dashed", opacity: 0.9 },
+      defaultScope: { showAllTimeframes: true, extend: "none" },
+
+      render(svg, drawing, layer) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return;
+        const xMin = Math.min(pa.x, pb.x), xMax = Math.max(pa.x, pb.x);
+        const priceHi = Math.max(drawing.points[0].price, drawing.points[1].price);
+        const priceLo = Math.min(drawing.points[0].price, drawing.points[1].price);
+        const range = priceHi - priceLo;
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+        for (const lvl of FIB_LEVELS) {
+          const price = priceHi - range * lvl;
+          const py = layer.series.priceToCoordinate(price);
+          if (py == null) continue;
+          const isEdge = lvl === 0 || lvl === 1;
+          const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          ln.setAttribute("x1", xMin); ln.setAttribute("y1", py);
+          ln.setAttribute("x2", xMax); ln.setAttribute("y2", py);
+          ln.setAttribute("stroke", drawing.style.color);
+          ln.setAttribute("stroke-width", isEdge ? drawing.style.width + 1 : drawing.style.width);
+          ln.setAttribute("stroke-opacity", drawing.style.opacity);
+          if (!isEdge && drawing.style.dash !== "solid") {
+            const dash = DASH_MAP[drawing.style.dash] || "4,3";
+            ln.setAttribute("stroke-dasharray", dash);
+          }
+          g.appendChild(ln);
+          const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          t.setAttribute("x", xMax + 4);
+          t.setAttribute("y", py + 3);
+          t.setAttribute("fill", drawing.style.color);
+          t.setAttribute("font-size", "9");
+          t.textContent = lvl.toFixed(3).replace(/\.?0+$/, "");
+          g.appendChild(t);
+        }
+        svg.appendChild(g);
+      },
+
+      hitTest(drawing, x, y, layer, tol = 5) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return false;
+        if (x < Math.min(pa.x, pb.x) - tol || x > Math.max(pa.x, pb.x) + tol) return false;
+        const priceHi = Math.max(drawing.points[0].price, drawing.points[1].price);
+        const priceLo = Math.min(drawing.points[0].price, drawing.points[1].price);
+        const range = priceHi - priceLo;
+        for (const lvl of FIB_LEVELS) {
+          const py = layer.series.priceToCoordinate(priceHi - range * lvl);
+          if (py != null && Math.abs(y - py) <= tol) return true;
+        }
+        return false;
+      },
+
+      handles(drawing, layer) {
+        const pa = layer.toPx(drawing.points[0]);
+        const pb = layer.toPx(drawing.points[1]);
+        if (!pa || !pb) return [];
+        return [
+          { id: 0, kind: "endpoint", x: pa.x, y: pa.y },
+          { id: 1, kind: "endpoint", x: pb.x, y: pb.y },
+          { id: "mid", kind: "mid", x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 },
         ];
       },
 
