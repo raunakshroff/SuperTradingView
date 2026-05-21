@@ -4,7 +4,7 @@
  *   - DrawingStore: per-(source, symbol) drawing list in localStorage
  *   - PrefsStore:   user UI prefs (toolbar mode, default snap, undo depth)
  *   - DrawingLayer: per-pane drawing layer (added in a later task)
- *   - TOOL_DEFS:    list of available drawing tools (added in a later task)
+ *   - TOOL_DEFS:    list of available drawing tools
  *   - util:         geometry + ID helpers
  */
 (function () {
@@ -30,6 +30,26 @@
     try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota / private mode */ }
   }
 
+  const _HEX_RE = /^#[0-9a-fA-F]{6}$/;
+  const _DASH_KEYS = new Set(["solid", "dashed", "dotted", "dashdot"]);
+
+  function _isValidDrawing(d) {
+    if (!d || typeof d.id !== "string" || typeof d.tool !== "string") return false;
+    if (!Array.isArray(d.points)) return false;
+    if (!d.points.every((p) => p && typeof p.time === "number" && typeof p.price === "number")) return false;
+    // Style shape (when present): defaults applied at render time, but reject hostile values.
+    const s = d.style;
+    if (s != null) {
+      if (typeof s !== "object") return false;
+      if (s.color != null && !(typeof s.color === "string" && _HEX_RE.test(s.color))) return false;
+      if (s.width != null && !(typeof s.width === "number" && Number.isFinite(s.width) && s.width > 0 && s.width < 50)) return false;
+      if (s.opacity != null && !(typeof s.opacity === "number" && Number.isFinite(s.opacity) && s.opacity >= 0 && s.opacity <= 1)) return false;
+      if (s.dash != null && !_DASH_KEYS.has(s.dash)) return false;
+      if (s.label != null && typeof s.label !== "string") return false;
+    }
+    return true;
+  }
+
   const DrawingStore = {
     _key(source, symbol) { return `${source}|${symbol.toUpperCase()}`; },
 
@@ -37,11 +57,7 @@
       const all = _readJSON(LS_DRAWINGS, {});
       const arr = all[this._key(source, symbol)] || [];
       // Drop any persisted entries that fail a basic shape check
-      return arr.filter((d) =>
-        d && typeof d.id === "string"
-          && typeof d.tool === "string"
-          && Array.isArray(d.points)
-          && d.points.every((p) => typeof p.time === "number" && typeof p.price === "number"));
+      return arr.filter((d) => _isValidDrawing(d));
     },
 
     set(source, symbol, drawings) {
@@ -65,6 +81,47 @@
   const util = {
     newId() { return "drw_" + Math.random().toString(36).slice(2, 10); },
   };
+
+  const DASH_MAP = {
+    solid: null,
+    dashed: "8,4",
+    dotted: "2,3",
+    dashdot: "8,4,2,4",
+  };
+
+  const TOOL_DEFS = [
+    {
+      id: "trendline",
+      name: "Trendline",
+      pointsNeeded: 2,
+      defaultStyle: { color: "#ffca28", width: 2, dash: "solid", opacity: 1 },
+      defaultScope: { showAllTimeframes: true, extend: "none" },
+
+      render(svg, drawing, layer) {
+        const [a, b] = drawing.points;
+        const pa = layer.toPx(a);
+        const pb = layer.toPx(b);
+        if (!pa || !pb) return;
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("data-drawing-id", drawing.id);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", pa.x);
+        line.setAttribute("y1", pa.y);
+        line.setAttribute("x2", pb.x);
+        line.setAttribute("y2", pb.y);
+        line.setAttribute("stroke", drawing.style.color);
+        line.setAttribute("stroke-width", drawing.style.width);
+        line.setAttribute("stroke-opacity", drawing.style.opacity);
+        line.setAttribute("stroke-linecap", "round");
+        const dash = DASH_MAP[drawing.style.dash];
+        if (dash) line.setAttribute("stroke-dasharray", dash);
+        g.appendChild(line);
+        svg.appendChild(g);
+      },
+    },
+  ];
+
+  const TOOL_DEFS_BY_ID = Object.fromEntries(TOOL_DEFS.map((t) => [t.id, t]));
 
   class DrawingLayer {
     /**
@@ -135,6 +192,8 @@
       this.wrapper.appendChild(this.handleHost);
       paneEl.appendChild(this.wrapper);
 
+      this.wrapper.addEventListener("click", (ev) => this._onClick(ev));
+
       this._onResize = () => this._redraw();
       this._onVisRange = () => this._redraw();
       this.chart.timeScale().subscribeVisibleTimeRangeChange(this._onVisRange);
@@ -174,11 +233,71 @@
       DrawingStore.set(this.source, this.symbol, this.drawings);
     }
 
-    /** Re-render every drawing. Placeholder until tools are added. */
+    /** Re-render every drawing. */
     _redraw() {
       if (!this.svg) return;
       while (this.svg.firstChild) this.svg.removeChild(this.svg.firstChild);
-      // Tools render in later tasks.
+      // Sort by z so higher-z draws on top
+      const sorted = this.drawings.slice().sort((a, b) => (a.z || 0) - (b.z || 0));
+      for (const d of sorted) {
+        const def = TOOL_DEFS_BY_ID[d.tool];
+        if (def && def.render) def.render(this.svg, d, this);
+      }
+    }
+
+    setActiveTool(toolId) {
+      const isCursor = toolId === "cursor" || toolId == null;
+      const def = isCursor ? null : TOOL_DEFS_BY_ID[toolId];
+      if (isCursor || !def) {
+        this.mode = "idle";
+        this.activeTool = null;
+        this.placePoints = [];
+        this._setCursor("default");
+        this._setOverlayInteractive(false);
+        if (this._notifyToolChange) this._notifyToolChange("cursor");
+        return;
+      }
+      this.mode = "placing";
+      this.activeTool = def;
+      this.placePoints = [];
+      this._setCursor("crosshair");
+      this._setOverlayInteractive(true);
+      if (this._notifyToolChange) this._notifyToolChange(def.id);
+    }
+
+    _setCursor(c) { if (this.wrapper) this.wrapper.style.cursor = c; }
+
+    _setOverlayInteractive(on) {
+      if (!this.wrapper) return;
+      this.wrapper.style.pointerEvents = on ? "auto" : "none";
+    }
+
+    _onClick(ev) {
+      if (this.mode !== "placing" || !this.activeTool) return;
+      const rect = this.wrapper.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const y = ev.clientY - rect.top;
+      const pt = this.fromPx(x, y);
+      if (!pt) return;
+      this.placePoints.push(pt);
+
+      if (this.placePoints.length >= this.activeTool.pointsNeeded) {
+        const drawing = {
+          id: util.newId(),
+          tool: this.activeTool.id,
+          points: this.placePoints.slice(),
+          style: { ...this.activeTool.defaultStyle },
+          scope: { ...this.activeTool.defaultScope },
+          z: this.drawings.length,
+          createdAt: Math.floor(Date.now() / 1000),
+        };
+        this.drawings.push(drawing);
+        this.save();
+        this.placePoints = [];
+        // One-shot: return to cursor (setActiveTool fires the notify).
+        this.setActiveTool("cursor");
+        this._redraw();
+      }
     }
 
     setSymbol(source, symbol, timeframe) {
@@ -211,5 +330,5 @@
     }
   }
 
-  window.Drawings = { DrawingStore, PrefsStore, DrawingLayer, util };
+  window.Drawings = { DrawingStore, PrefsStore, DrawingLayer, TOOL_DEFS, util };
 })();

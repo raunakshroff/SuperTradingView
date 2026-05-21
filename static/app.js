@@ -262,6 +262,15 @@ class Pane {
       symbol:    this.state.symbol,
       timeframe: this.state.tf,
     });
+    this.toolBtns = this.root.querySelectorAll(".draw-tool[data-tool]");
+    this.toolBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.tool;
+        this._setActiveTool(id);
+      });
+    });
+    // Let the layer flip the toolbar back to "cursor" after a one-shot draw.
+    this.drawingLayer._notifyToolChange = (id) => this._reflectActiveTool(id);
     this._applyPaneSizing();
     this._refreshLegends();
     this._updateFxButton();
@@ -568,6 +577,20 @@ class Pane {
       if (n.parentNode) n.parentNode.removeChild(n);
     }
     this.legendNodes = [];
+  }
+
+  _setActiveTool(id) {
+    // The layer's setActiveTool() fires _notifyToolChange with the resolved
+    // tool id (or "cursor" if the requested tool is unknown). That callback
+    // is wired to _reflectActiveTool in the constructor — let it be the
+    // single source of truth so the highlight matches the actual layer state.
+    this.drawingLayer.setActiveTool(id);
+  }
+
+  _reflectActiveTool(id) {
+    this.toolBtns.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tool === id);
+    });
   }
 
   _refreshLegends() {
