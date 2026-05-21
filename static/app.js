@@ -255,6 +255,13 @@ class Pane {
       this._buildIndicator(key, paneIdx);
       paneIdx++;
     }
+    this.drawingLayer = new Drawings.DrawingLayer({
+      chart:     this.chart,
+      series:    this.series,
+      source:    this.state.source,
+      symbol:    this.state.symbol,
+      timeframe: this.state.tf,
+    });
     this._applyPaneSizing();
     this._refreshLegends();
     this._updateFxButton();
@@ -320,6 +327,7 @@ class Pane {
     if (resolved.symbol === this.state.symbol && resolved.source === this.state.source) return;
     this.setState({ symbol: resolved.symbol, source: resolved.source });
     this.symbolInput.value = resolved.symbol;
+    this.drawingLayer.setSymbol(resolved.source, resolved.symbol, this.state.tf);
     this.resubscribe();
   }
 
@@ -334,6 +342,7 @@ class Pane {
       if (tf === this.state.tf) return;
       this.tfPillsEl.querySelectorAll(".tf-pill").forEach((b) => b.classList.toggle("active", b === btn));
       this.setState({ tf });
+      this.drawingLayer.timeframe = tf;
       this.resubscribe();
     });
   }
@@ -769,6 +778,7 @@ class Pane {
     this.unsubscribe();
     clearTimeout(this.flashTimer);
     this._clearLegends();
+    this.drawingLayer.destroy();
     this.chart.remove();
     this.root.remove();
   }
