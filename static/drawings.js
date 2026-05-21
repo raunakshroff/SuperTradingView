@@ -145,6 +145,25 @@
         if (!pa || !pb) return false;
         return distPointToSegment(x, y, pa.x, pa.y, pb.x, pb.y) <= tol;
       },
+
+      moveHandle(drawing, handleId, x, y, layer) {
+        const pt = layer.fromPx(x, y);
+        if (!pt) return;
+        // handleId comes from h.id which can be 0 or 1 (numbers). Dataset stores
+        // strings; accept both forms so the caller doesn't have to normalize.
+        if (handleId === 0 || handleId === "0") drawing.points[0] = pt;
+        else if (handleId === 1 || handleId === "1") drawing.points[1] = pt;
+      },
+
+      moveAll(drawing, dx, dy, layer) {
+        const oldA = layer.toPx(drawing.points[0]);
+        const oldB = layer.toPx(drawing.points[1]);
+        if (!oldA || !oldB) return;
+        const newA = layer.fromPx(oldA.x + dx, oldA.y + dy);
+        const newB = layer.fromPx(oldB.x + dx, oldB.y + dy);
+        if (newA) drawing.points[0] = newA;
+        if (newB) drawing.points[1] = newB;
+      },
     },
   ];
 
@@ -183,6 +202,7 @@
       this._destroyed = false;
       this._onResize = null;
       this._onVisRange = null;
+      this._onKeyDown = null;
 
       // Defer DOM attach until the pane HTML element exists (v5 layout pass).
       requestAnimationFrame(() => this._attach());
@@ -229,6 +249,21 @@
       this._onVisRange = () => this._redraw();
       this.chart.timeScale().subscribeVisibleTimeRangeChange(this._onVisRange);
       window.addEventListener("resize", this._onResize);
+
+      this._onKeyDown = (ev) => {
+        if (this._destroyed) return;
+        if (!this.selectedId) return;
+        // Don't hijack typing in form controls
+        if (ev.target && /INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
+        if (ev.key === "Escape") {
+          this.deselect();
+          ev.stopPropagation();
+        } else if (ev.key === "Delete" || ev.key === "Backspace") {
+          this._handleMiniAction("del");
+          ev.preventDefault();
+        }
+      };
+      document.addEventListener("keydown", this._onKeyDown);
 
       this.load();
       this._redraw();
@@ -329,6 +364,7 @@
         el.style.left = h.x + "px";
         el.style.top  = h.y + "px";
         el.dataset.handleId = String(h.id);
+        this._attachHandleDrag(el, d, h);
         this.handleHost.appendChild(el);
       }
 
@@ -338,6 +374,40 @@
       this.miniToolbar.style.left = top.x + "px";
       this.miniToolbar.style.top  = Math.max(8, top.y - 36) + "px";
       this.handleHost.appendChild(this.miniToolbar);
+    }
+
+    _attachHandleDrag(el, drawing, handle) {
+      const def = TOOL_DEFS_BY_ID[drawing.tool];
+      if (!def) return;
+      el.addEventListener("pointerdown", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        try { el.setPointerCapture(ev.pointerId); } catch (_e) { /* not always supported */ }
+        const rect = this.wrapper.getBoundingClientRect();
+        let lastX = ev.clientX - rect.left;
+        let lastY = ev.clientY - rect.top;
+        const onMove = (mv) => {
+          const x = mv.clientX - rect.left;
+          const y = mv.clientY - rect.top;
+          if (handle.kind === "mid" && def.moveAll) {
+            def.moveAll(drawing, x - lastX, y - lastY, this);
+          } else if (def.moveHandle) {
+            def.moveHandle(drawing, handle.id, x, y, this);
+          }
+          lastX = x; lastY = y;
+          this._redraw();
+        };
+        const onUp = () => {
+          try { el.releasePointerCapture(ev.pointerId); } catch (_e) { /* already released */ }
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          window.removeEventListener("pointercancel", onUp);
+          this.save();
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+      });
     }
 
     _buildMiniToolbar() {
@@ -467,6 +537,10 @@
       if (this._onResize) {
         window.removeEventListener("resize", this._onResize);
         this._onResize = null;
+      }
+      if (this._onKeyDown) {
+        document.removeEventListener("keydown", this._onKeyDown);
+        this._onKeyDown = null;
       }
       if (this.wrapper && this.wrapper.parentNode) {
         this.wrapper.parentNode.removeChild(this.wrapper);
