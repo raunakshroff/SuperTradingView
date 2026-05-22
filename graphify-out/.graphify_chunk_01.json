@@ -1,0 +1,1243 @@
+{
+  "nodes": [
+    {
+      "id": "claudemd_root",
+      "label": "CLAUDE.md (Project Guide)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "claudemd_pluggable_data_sources",
+      "label": "Pluggable Data Sources Pattern",
+      "file_type": "rationale",
+      "source_file": "CLAUDE.md",
+      "source_location": "section 1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "claudemd_lwc_v5_multipane",
+      "label": "Lightweight Charts v5 Multi-Pane",
+      "file_type": "rationale",
+      "source_file": "CLAUDE.md",
+      "source_location": "section 2",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "claudemd_self_contained_indicator_defs",
+      "label": "Self-contained Indicator Defs",
+      "file_type": "rationale",
+      "source_file": "CLAUDE.md",
+      "source_location": "section 3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "claudemd_self_contained_drawing_tool_defs",
+      "label": "Self-contained Drawing Tool Defs",
+      "file_type": "rationale",
+      "source_file": "CLAUDE.md",
+      "source_location": "section 4",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "claudemd_symbol_search",
+      "label": "Symbol Search Merged Endpoint",
+      "file_type": "rationale",
+      "source_file": "CLAUDE.md",
+      "source_location": "Symbol search",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "claudemd_state_persistence",
+      "label": "State Persistence via localStorage",
+      "file_type": "rationale",
+      "source_file": "CLAUDE.md",
+      "source_location": "State persistence",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "claudemd_gotchas",
+      "label": "Things That Have Bitten Us",
+      "file_type": "rationale",
+      "source_file": "CLAUDE.md",
+      "source_location": "Things that have bitten us",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_root",
+      "label": "README.md (User Guide)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_features",
+      "label": "Feature List (SuperTradingView)",
+      "file_type": "rationale",
+      "source_file": "README.md",
+      "source_location": "Features",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_indicators_33",
+      "label": "33 Technical Indicators",
+      "file_type": "rationale",
+      "source_file": "README.md",
+      "source_location": "Technical Indicators",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_drawing_tools",
+      "label": "Drawing Tools Toolbar (9 tools)",
+      "file_type": "rationale",
+      "source_file": "README.md",
+      "source_location": "Drawing Tools",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_architecture_notes",
+      "label": "Architecture Notes (HL multiplexer, SSE, v5 panes)",
+      "file_type": "rationale",
+      "source_file": "README.md",
+      "source_location": "Architecture notes",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "requirements_flask",
+      "label": "Flask >= 3.0 Dependency",
+      "file_type": "code",
+      "source_file": "requirements.txt",
+      "source_location": "line 1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "requirements_yfinance",
+      "label": "yfinance >= 0.2.40 Dependency",
+      "file_type": "code",
+      "source_file": "requirements.txt",
+      "source_location": "line 2",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "requirements_requests",
+      "label": "requests >= 2.31 Dependency",
+      "file_type": "code",
+      "source_file": "requirements.txt",
+      "source_location": "line 3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingplan_root",
+      "label": "Drawing Tools Implementation Plan",
+      "file_type": "document",
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingplan_drawingstore",
+      "label": "DrawingStore (localStorage persistence)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingplan_prefsstore",
+      "label": "PrefsStore (UI prefs)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingplan_drawinglayer",
+      "label": "DrawingLayer Class",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 2",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingplan_tool_defs",
+      "label": "TOOL_DEFS (def-driven tools)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingplan_stylemodal",
+      "label": "StyleModal",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 6",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingplan_coordinate_helpers",
+      "label": "toPx/fromPx Coordinate Helpers",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 2",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingplan_selection_handles",
+      "label": "Selection + Circular Handles + Mini-Toolbar",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 4",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_root",
+      "label": "Drawing Tools Design Spec",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_tool_defs",
+      "label": "TOOL_DEFS Array (Def-driven Tools)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Module drawings.js",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_data_model",
+      "label": "Drawing Data Model (absolute time/price points)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Data model",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_persistence",
+      "label": "Drawing Persistence (stv.drawings, stv.drawingPrefs)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Persistence",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_state_machine",
+      "label": "Interaction State Machine (IDLE/PLACING/SELECTED/EDITING)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Interaction state machine",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_undo_redo",
+      "label": "Per-pane Undo/Redo Stack",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Undo / redo",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_hit_testing",
+      "label": "Hit Testing (z-order descending)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Hit testing",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_settings_popover",
+      "label": "Drawing Settings Popover",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Settings",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "drawingspec_toolbar_buttons",
+      "label": "Toolbar Buttons Full List (13 buttons)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Toolbar buttons",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "stvspec_root",
+      "label": "SuperTradingView Design Spec",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "stvspec_pluggable_data_layer",
+      "label": "Pluggable Data Layer (DataSource ABC + REGISTRY)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Pluggable Data Layer",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "stvspec_data_flow",
+      "label": "Data Flow (HL WS, yfinance SSE)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Data Flow",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "stvspec_layout_rules",
+      "label": "Grid Layout Rules (1/2/4/6/8)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Layout Rules",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "stvspec_failure_handling",
+      "label": "Failure Handling (WS reconnect, yfinance keepalive)",
+      "file_type": "rationale",
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Failure Handling",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "indexhtml_root",
+      "label": "static/index.html",
+      "file_type": "code",
+      "source_file": "static/index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "indexhtml_pane_template",
+      "label": "<template id=pane-template>",
+      "file_type": "code",
+      "source_file": "static/index.html",
+      "source_location": "lines 69-117",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "indexhtml_layout_switcher",
+      "label": "Layout Switcher (5 SVG buttons)",
+      "file_type": "code",
+      "source_file": "static/index.html",
+      "source_location": "lines 18-61",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "indexhtml_indicators_modal",
+      "label": "Indicators Modal",
+      "file_type": "code",
+      "source_file": "static/index.html",
+      "source_location": "lines 120-145",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "indexhtml_draw_style_modal",
+      "label": "Draw Style Modal",
+      "file_type": "code",
+      "source_file": "static/index.html",
+      "source_location": "lines 147-163",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "indexhtml_draw_settings_pop",
+      "label": "Draw Settings Popover",
+      "file_type": "code",
+      "source_file": "static/index.html",
+      "source_location": "lines 169-190",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "indexhtml_draw_toolbar",
+      "label": "Drawing Toolbar (13 buttons)",
+      "file_type": "code",
+      "source_file": "static/index.html",
+      "source_location": "lines 95-112",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "indexhtml_lwc_cdn",
+      "label": "Lightweight Charts v5.2.0 CDN Script",
+      "file_type": "code",
+      "source_file": "static/index.html",
+      "source_location": "line 9",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "ext_hyperliquid_ws",
+      "label": "Hyperliquid WebSocket (wss://api.hyperliquid.xyz/ws)",
+      "file_type": "code",
+      "source_file": "README.md",
+      "source_location": "Features",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "ext_yfinance",
+      "label": "yfinance Library",
+      "file_type": "code",
+      "source_file": "requirements.txt",
+      "source_location": "line 2",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "ext_lightweight_charts",
+      "label": "Lightweight Charts v5",
+      "file_type": "code",
+      "source_file": "CLAUDE.md",
+      "source_location": "section 2",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "claudemd_root",
+      "target": "readme_root",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "Reference",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_root",
+      "target": "claudemd_pluggable_data_sources",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "section 1",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_root",
+      "target": "claudemd_lwc_v5_multipane",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "section 2",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_root",
+      "target": "claudemd_self_contained_indicator_defs",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "section 3",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_root",
+      "target": "claudemd_self_contained_drawing_tool_defs",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "section 4",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_root",
+      "target": "claudemd_symbol_search",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "Symbol search",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_root",
+      "target": "claudemd_state_persistence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "State persistence",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_root",
+      "target": "claudemd_gotchas",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "Things that have bitten us",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_self_contained_drawing_tool_defs",
+      "target": "claudemd_self_contained_indicator_defs",
+      "relation": "semantically_similar_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "Same def-driven pattern as indicators",
+      "weight": 1.0
+    },
+    {
+      "source": "claudemd_lwc_v5_multipane",
+      "target": "ext_lightweight_charts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "section 2",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_root",
+      "target": "readme_features",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "Features",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_root",
+      "target": "readme_indicators_33",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "Technical Indicators",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_root",
+      "target": "readme_drawing_tools",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "Drawing Tools",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_root",
+      "target": "readme_architecture_notes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "Architecture notes",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_features",
+      "target": "ext_hyperliquid_ws",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "Hyperliquid",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_features",
+      "target": "ext_yfinance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "yfinance",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_drawing_tools",
+      "target": "drawingspec_toolbar_buttons",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "README.md",
+      "source_location": "Drawing Tools",
+      "weight": 1.0
+    },
+    {
+      "source": "requirements_flask",
+      "target": "requirements_yfinance",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "requirements_yfinance",
+      "target": "ext_yfinance",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "requirements.txt",
+      "source_location": "line 2",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_root",
+      "target": "drawingspec_root",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Spec link",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_root",
+      "target": "drawingplan_drawingstore",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 1",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_root",
+      "target": "drawingplan_prefsstore",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 1",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_root",
+      "target": "drawingplan_drawinglayer",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 2",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_root",
+      "target": "drawingplan_tool_defs",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 3",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_root",
+      "target": "drawingplan_stylemodal",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 6",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_root",
+      "target": "drawingplan_coordinate_helpers",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 2",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_root",
+      "target": "drawingplan_selection_handles",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 4",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_drawingstore",
+      "target": "drawingspec_persistence",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 1",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_drawinglayer",
+      "target": "drawingspec_data_model",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 2",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_tool_defs",
+      "target": "drawingspec_tool_defs",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 3",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_selection_handles",
+      "target": "drawingspec_state_machine",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 4",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_stylemodal",
+      "target": "indexhtml_draw_style_modal",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 6 Step 1",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_root",
+      "target": "drawingspec_tool_defs",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Module drawings.js",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_root",
+      "target": "drawingspec_data_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Data model",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_root",
+      "target": "drawingspec_persistence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Persistence",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_root",
+      "target": "drawingspec_state_machine",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Interaction state machine",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_root",
+      "target": "drawingspec_undo_redo",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Undo / redo",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_root",
+      "target": "drawingspec_hit_testing",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Hit testing",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_root",
+      "target": "drawingspec_settings_popover",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Settings",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_root",
+      "target": "drawingspec_toolbar_buttons",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Toolbar buttons",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_tool_defs",
+      "target": "claudemd_self_contained_indicator_defs",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Mirrors def-driven architecture used in indicators.js",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_persistence",
+      "target": "claudemd_state_persistence",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Persistence",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_settings_popover",
+      "target": "indexhtml_draw_settings_pop",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Settings",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_toolbar_buttons",
+      "target": "indexhtml_draw_toolbar",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Toolbar buttons",
+      "weight": 1.0
+    },
+    {
+      "source": "stvspec_root",
+      "target": "stvspec_pluggable_data_layer",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Pluggable Data Layer",
+      "weight": 1.0
+    },
+    {
+      "source": "stvspec_root",
+      "target": "stvspec_data_flow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Data Flow",
+      "weight": 1.0
+    },
+    {
+      "source": "stvspec_root",
+      "target": "stvspec_layout_rules",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Layout Rules",
+      "weight": 1.0
+    },
+    {
+      "source": "stvspec_root",
+      "target": "stvspec_failure_handling",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Failure Handling",
+      "weight": 1.0
+    },
+    {
+      "source": "stvspec_pluggable_data_layer",
+      "target": "claudemd_pluggable_data_sources",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Pluggable Data Layer",
+      "weight": 1.0
+    },
+    {
+      "source": "stvspec_data_flow",
+      "target": "ext_hyperliquid_ws",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Data Flow",
+      "weight": 1.0
+    },
+    {
+      "source": "stvspec_data_flow",
+      "target": "ext_yfinance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Data Flow",
+      "weight": 1.0
+    },
+    {
+      "source": "stvspec_layout_rules",
+      "target": "indexhtml_layout_switcher",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/superpowers/specs/2026-05-20-supertradingview-design.md",
+      "source_location": "Layout Rules",
+      "weight": 1.0
+    },
+    {
+      "source": "indexhtml_root",
+      "target": "indexhtml_pane_template",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "static/index.html",
+      "source_location": "lines 69-117",
+      "weight": 1.0
+    },
+    {
+      "source": "indexhtml_root",
+      "target": "indexhtml_layout_switcher",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "static/index.html",
+      "source_location": "lines 18-61",
+      "weight": 1.0
+    },
+    {
+      "source": "indexhtml_root",
+      "target": "indexhtml_indicators_modal",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "static/index.html",
+      "source_location": "lines 120-145",
+      "weight": 1.0
+    },
+    {
+      "source": "indexhtml_root",
+      "target": "indexhtml_draw_style_modal",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "static/index.html",
+      "source_location": "lines 147-163",
+      "weight": 1.0
+    },
+    {
+      "source": "indexhtml_root",
+      "target": "indexhtml_draw_settings_pop",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "static/index.html",
+      "source_location": "lines 169-190",
+      "weight": 1.0
+    },
+    {
+      "source": "indexhtml_root",
+      "target": "indexhtml_lwc_cdn",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "static/index.html",
+      "source_location": "line 9",
+      "weight": 1.0
+    },
+    {
+      "source": "indexhtml_pane_template",
+      "target": "indexhtml_draw_toolbar",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "static/index.html",
+      "source_location": "lines 95-112",
+      "weight": 1.0
+    },
+    {
+      "source": "indexhtml_lwc_cdn",
+      "target": "ext_lightweight_charts",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "static/index.html",
+      "source_location": "line 9",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_indicators_33",
+      "target": "claudemd_self_contained_indicator_defs",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "README.md",
+      "source_location": "Technical Indicators",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_drawing_tools",
+      "target": "claudemd_self_contained_drawing_tool_defs",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "README.md",
+      "source_location": "Drawing Tools",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_drawinglayer",
+      "target": "claudemd_self_contained_drawing_tool_defs",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 2",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingspec_undo_redo",
+      "target": "readme_drawing_tools",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md",
+      "source_location": "Undo / redo",
+      "weight": 1.0
+    },
+    {
+      "source": "drawingplan_coordinate_helpers",
+      "target": "claudemd_lwc_v5_multipane",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md",
+      "source_location": "Task 2",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "def_driven_pattern",
+      "label": "Def-driven Module Pattern (Indicators + Drawings)",
+      "nodes": [
+        "claudemd_self_contained_indicator_defs",
+        "claudemd_self_contained_drawing_tool_defs",
+        "drawingspec_tool_defs",
+        "drawingplan_tool_defs"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md"
+    },
+    {
+      "id": "drawing_layer_pipeline",
+      "label": "Drawing Layer End-to-End Pipeline",
+      "nodes": [
+        "drawingplan_drawinglayer",
+        "drawingplan_drawingstore",
+        "drawingplan_tool_defs",
+        "drawingplan_coordinate_helpers",
+        "drawingplan_selection_handles",
+        "drawingplan_stylemodal"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/plans/2026-05-20-drawing-tools.md"
+    },
+    {
+      "id": "persistence_layer",
+      "label": "Frontend localStorage Persistence",
+      "nodes": [
+        "claudemd_state_persistence",
+        "drawingspec_persistence",
+        "drawingplan_drawingstore",
+        "drawingplan_prefsstore"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/superpowers/specs/2026-05-20-drawing-tools-design.md"
+    }
+  ],
+  "input_tokens": 70842,
+  "output_tokens": 17711
+}

@@ -1,0 +1,54 @@
+{
+  "D:\\Weekend Projects\\SuperTradingView\\app.py": {
+    "mtime": 1779275024.933893,
+    "hash": "d3d2e18d4e07af95cc8803ae24a18147"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\data_source.py": {
+    "mtime": 1779275114.999854,
+    "hash": "1e1404b5b3d66fc5f7a7c4a2b01a4bdc"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\static\\app.js": {
+    "mtime": 1779385165.3433044,
+    "hash": "424d4658fc8ab491f44c2dfd63f05eeb"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\static\\drawings.js": {
+    "mtime": 1779428294.302336,
+    "hash": "333e87fb60214e1f59c40d99675b3a47"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\static\\indicators.js": {
+    "mtime": 1779274298.220847,
+    "hash": "ebdb15846905f3a22891f8272dcf75a6"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\CLAUDE.md": {
+    "mtime": 1779385552.5753703,
+    "hash": "aa198960ecd2e30b689516fd2a043da9"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\README.md": {
+    "mtime": 1779425190.3810956,
+    "hash": "d367b95dfde73da2d5c6396a1b33106f"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\requirements.txt": {
+    "mtime": 1779263115.333198,
+    "hash": "1fbce106df5606335b285e19180571bd"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\docs\\superpowers\\plans\\2026-05-20-drawing-tools.md": {
+    "mtime": 1779327409.0278687,
+    "hash": "ffb0810a752f25b6ce39e6dd557d13c2"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\docs\\superpowers\\specs\\2026-05-20-drawing-tools-design.md": {
+    "mtime": 1779294294.3047373,
+    "hash": "0b5243e572d736c5bcfd0e96451ccfa5"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\docs\\superpowers\\specs\\2026-05-20-supertradingview-design.md": {
+    "mtime": 1779263106.8977203,
+    "hash": "96669ec9d880504ec592cfb7ca1b5376"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\static\\index.html": {
+    "mtime": 1779373245.4529274,
+    "hash": "d67d32b39872fcb45666abd543072c5b"
+  },
+  "D:\\Weekend Projects\\SuperTradingView\\docs\\screenshot.png": {
+    "mtime": 1779273724.251844,
+    "hash": "f7a8d522ac82eb22fdba5b707aa68e90"
+  }
+}

@@ -94,7 +94,11 @@ Each pane has a left-edge toolbar (toggle to floating palette in settings) with 
 git clone https://github.com/raunakshroff/SuperTradingView.git
 cd SuperTradingView
 pip install -r requirements.txt
-python app.py
+# Run the app
+# macOS / Linux
+python3 app.py
+# Windows (recommended):
+py -3 app.py
 ```
 
 Then open <http://127.0.0.1:5173>.

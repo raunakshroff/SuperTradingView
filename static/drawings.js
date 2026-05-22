@@ -1113,6 +1113,22 @@
       this.wrapper.addEventListener("pointerdown", () => {
         DrawingLayer._activeLayer = this;
       });
+      this.wrapper.addEventListener("mousemove", (ev) => {
+        if (this.mode !== "placing" || !this.activeTool) return;
+        const rect = this.wrapper.getBoundingClientRect();
+        this._previewCursor = {
+          x: ev.clientX - rect.left,
+          y: ev.clientY - rect.top,
+          shiftKey: ev.shiftKey,
+        };
+        this._renderPreview();
+      });
+      this.wrapper.addEventListener("mouseleave", () => {
+        if (this._previewCursor) {
+          this._previewCursor = null;
+          this._clearPreview();
+        }
+      });
 
       // Cursor mode must remain interactive so clicks can hit-test for selection.
       this._setOverlayInteractive(true);
@@ -1149,6 +1165,14 @@
           DrawingLayer._activeLayer = this;
           ev.preventDefault();
           if (isUndo) this.undo(); else this.redo();
+          return;
+        }
+
+        // Esc cancels an in-progress placement and returns to cursor mode.
+        if (ev.key === "Escape" && this.mode === "placing") {
+          this.setActiveTool("cursor");
+          ev.preventDefault();
+          ev.stopPropagation();
           return;
         }
 
@@ -1225,18 +1249,69 @@
     _redraw() {
       if (!this.svg) return;
       while (this.svg.firstChild) this.svg.removeChild(this.svg.firstChild);
+      this._previewGroup = null;     // was removed with the rest
       // Sort by z so higher-z draws on top
       const sorted = this.drawings.slice().sort((a, b) => (a.z || 0) - (b.z || 0));
       for (const d of sorted) {
         const def = TOOL_DEFS_BY_ID[d.tool];
         if (def && def.render) def.render(this.svg, d, this);
       }
+      this._renderPreview();
       this._renderHandles();
+    }
+
+    /**
+     * While placing a multi-click drawing, render a ghost of the in-progress
+     * shape using placePoints + the current cursor position. Without this the
+     * user sees nothing between the 1st and Nth click and assumes the tool is
+     * broken. Cleared on commit, Esc, or tool change.
+     */
+    _renderPreview() {
+      this._clearPreview();
+      if (!this.svg) return;
+      if (this.mode !== "placing" || !this.activeTool) return;
+      const cur = this._previewCursor;
+      if (!cur) return;
+      const def = this.activeTool;
+      // For 2+ point tools, wait for at least one committed point before previewing.
+      if (def.pointsNeeded > 1 && this.placePoints.length === 0) return;
+      const cursorPt = this.fromPx(cur.x, cur.y);
+      if (!cursorPt) return;
+      const snapped = this._snapPoint(cursorPt, { shiftKey: cur.shiftKey });
+      const points = [...this.placePoints, snapped];
+      while (points.length < def.pointsNeeded) points.push(snapped);
+      const ghost = {
+        id: "_preview",
+        tool: def.id,
+        points,
+        style: { ...def.defaultStyle, opacity: 0.55 * (def.defaultStyle.opacity ?? 1) },
+        scope: { ...def.defaultScope },
+        z: 1e9,
+      };
+      this._previewGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      this._previewGroup.setAttribute("data-preview", "true");
+      this._previewGroup.setAttribute("pointer-events", "none");
+      this.svg.appendChild(this._previewGroup);
+      try {
+        def.render(this._previewGroup, ghost, this);
+      } catch (_e) {
+        this._clearPreview();
+      }
+    }
+
+    _clearPreview() {
+      if (this._previewGroup && this._previewGroup.parentNode) {
+        this._previewGroup.parentNode.removeChild(this._previewGroup);
+      }
+      this._previewGroup = null;
     }
 
     setActiveTool(toolId) {
       const isCursor = toolId === "cursor" || toolId == null;
       const def = isCursor ? null : TOOL_DEFS_BY_ID[toolId];
+      // Any tool change cancels an in-progress placement preview.
+      this._previewCursor = null;
+      this._clearPreview();
       if (isCursor || !def) {
         this.mode = "idle";
         this.activeTool = null;
@@ -1414,6 +1489,9 @@
         const pt = this.fromPx(x, y);
         if (!pt) return;
         this.placePoints.push(this._snapPoint(pt, ev));
+        // Refresh the in-progress preview to reflect the new committed point.
+        this._previewCursor = { x, y, shiftKey: ev.shiftKey };
+        if (this.placePoints.length < this.activeTool.pointsNeeded) this._renderPreview();
         if (this.placePoints.length >= this.activeTool.pointsNeeded) {
           // Spec: discard zero-length drawings (two clicks at the same point).
           if (this.placePoints.length >= 2) {
