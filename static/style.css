@@ -36,33 +36,78 @@ html, body {
 
 /* ── Top bar ──────────────────────────────────────────────────────────────── */
 .topbar {
+  position: relative;
   height: var(--topbar-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  background: var(--panel);
+  padding: 0 16px;
+  background: linear-gradient(135deg, #161c28 0%, #10141e 100%);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.3);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+  z-index: 10;
 }
 
+/* subtle accent glow along the bottom edge, centered */
+.topbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 45%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(79, 140, 255, 0.45) 40%,
+    rgba(38, 166, 154, 0.35) 60%,
+    transparent 100%);
+  pointer-events: none;
+}
+
+/* ── Brand ────────────────────────────────────────────────────────────────── */
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.2px;
-  color: var(--text);
+  gap: 10px;
   user-select: none;
+  text-decoration: none;
 }
 
-.brand-mark {
-  width: 5px;
-  height: 20px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, var(--accent) 0%, var(--up) 100%);
+.brand-logo {
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
+  display: block;
+  filter: drop-shadow(0 0 6px rgba(79, 140, 255, 0.25));
+}
+
+.brand-name {
+  display: flex;
+  align-items: baseline;
+  line-height: 1;
+  letter-spacing: -0.3px;
+}
+
+.brand-super {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-dim);
+  letter-spacing: 0.1px;
+}
+
+.brand-trading {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.4px;
+}
+
+.brand-view {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.4px;
 }
 
 /* ── Layout switcher — visual icon buttons ────────────────────────────────── */
@@ -70,10 +115,11 @@ html, body {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--panel-2);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 3px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .layout-btn {
@@ -85,17 +131,18 @@ html, body {
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
-  color: var(--text-dim);
+  color: var(--text-faint);
   cursor: pointer;
-  transition: background 100ms ease, color 100ms ease;
+  transition: background 120ms ease, color 120ms ease;
 }
 .layout-btn:hover {
   background: var(--panel-3);
-  color: var(--text);
+  color: var(--text-dim);
 }
 .layout-btn.active {
-  background: var(--accent);
+  background: linear-gradient(135deg, rgba(79,140,255,0.9) 0%, rgba(79,140,255,0.7) 100%);
   color: #fff;
+  box-shadow: 0 1px 4px rgba(79,140,255,0.35);
 }
 .layout-btn svg { display: block; }
 
@@ -122,6 +169,11 @@ html, body {
   overflow: hidden;
   min-width: 0;
   min-height: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  transition: border-color 200ms ease;
+}
+.pane:focus-within {
+  border-color: rgba(79,140,255,0.30);
 }
 
 .pane-header {
@@ -129,7 +181,7 @@ html, body {
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  background: var(--panel-2);
+  background: linear-gradient(180deg, var(--panel-2) 0%, #181e2c 100%);
   border-bottom: 1px solid var(--border);
   transition: background-color 200ms ease-out;
 }
