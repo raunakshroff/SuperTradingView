@@ -214,115 +214,154 @@ html, body {
   overflow: hidden;
 }
 
-/* ── Top bar ──────────────────────────────────────────────────────────────── */
+/* ── Top bar ─────────────────────────────────────────────────────────── */
 .topbar {
-  position: relative;
-  height: var(--topbar-h);
+  height: 48px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  background: linear-gradient(135deg, #161c28 0%, #10141e 100%);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+  gap: 12px;
+  border-bottom: 1px solid var(--line-faint);
+  background: var(--canvas);
+  flex-shrink: 0;
+  position: relative;
   z-index: 10;
 }
 
-/* subtle accent glow along the bottom edge, centered */
-.topbar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 45%;
-  height: 1px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(79, 140, 255, 0.45) 40%,
-    rgba(38, 166, 154, 0.35) 60%,
-    transparent 100%);
-  pointer-events: none;
-}
-
-/* ── Brand ────────────────────────────────────────────────────────────────── */
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink);
   user-select: none;
-  text-decoration: none;
+}
+.brand-mark {
+  width: 22px; height: 22px; border-radius: 6px;
+  background: var(--void); border: 1px solid var(--line);
+  position: relative;
+}
+.brand-mark::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(45deg, transparent 30%, var(--acid) 30%, var(--acid) 35%, transparent 35%) center/8px 8px no-repeat;
 }
 
-.brand-logo {
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  display: block;
-  filter: drop-shadow(0 0 6px rgba(79, 140, 255, 0.25));
+.topbar-sep {
+  width: 1px; height: 18px; background: var(--line-faint);
 }
 
-.brand-name {
+.personality {
   display: flex;
-  align-items: baseline;
-  line-height: 1;
-  letter-spacing: -0.3px;
+  gap: 1px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-sm);
+  padding: 2px;
+}
+.pers-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-xs);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: inherit;
+}
+.pers-btn:hover { color: var(--ink); }
+.pers-btn.on {
+  background: var(--surface-3);
+  color: var(--ink);
+  font-weight: 500;
 }
 
-.brand-super {
-  font-size: 13px;
-  font-weight: 300;
-  color: var(--text-dim);
-  letter-spacing: 0.1px;
+.cmd-k {
+  flex: 1;
+  max-width: 460px;
+  margin-left: auto;
+  margin-right: auto;
+  height: 30px;
+  padding: 0 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.cmd-k:hover { border-color: var(--line); color: var(--ink); }
+.cmd-k > span:nth-of-type(1) { font-size: 12px; flex: 1; }
+.cmd-k-hint { display: flex; gap: 3px; }
+
+.clock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+}
+.clock-time { font-size: 10px; color: var(--ink-soft); }
+
+.theme-toggle, .avatar {
+  flex-shrink: 0;
+}
+.theme-toggle {
+  width: 30px; height: 30px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-sm);
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.theme-toggle:hover { background: var(--surface-2); color: var(--ink); }
+
+.avatar {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--surface-4), var(--surface-2));
+  border: 1px solid var(--line-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  color: var(--ink-mute);
+  cursor: pointer;
+  user-select: none;
 }
 
-.brand-trading {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: -0.4px;
-}
-
-.brand-view {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--accent);
-  letter-spacing: -0.4px;
-}
-
-/* ── Layout switcher — visual icon buttons ────────────────────────────────── */
+/* Existing layout switcher restyle */
 .layout-switcher {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--surface-1);
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-sm);
   padding: 3px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
 }
-
 .layout-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 34px;
-  height: 28px;
+  height: 26px;
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-faint);
+  border-radius: var(--r-xs);
+  color: var(--ink-soft);
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
+  transition: background 100ms ease, color 100ms ease;
 }
-.layout-btn:hover {
-  background: var(--panel-3);
-  color: var(--text-dim);
-}
+.layout-btn:hover { background: var(--surface-2); color: var(--ink); }
 .layout-btn.active {
-  background: linear-gradient(135deg, rgba(79,140,255,0.9) 0%, rgba(79,140,255,0.7) 100%);
-  color: #fff;
-  box-shadow: 0 1px 4px rgba(79,140,255,0.35);
+  background: var(--acid-soft);
+  color: var(--acid);
 }
 .layout-btn svg { display: block; }
 

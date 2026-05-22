@@ -1180,3 +1180,64 @@ function renderIndicatorsModal() {
     }
   });
 })();
+
+// --- Topbar — clock, ⌘K placeholder, theme toggle ----------------------------
+
+function startClock() {
+  const el = document.getElementById("clock-time");
+  if (!el) return;
+  const tick = () => {
+    const now = new Date();
+    const hh = String((now.getUTCHours() + 19) % 24).padStart(2, "0");
+    const mm = String(now.getUTCMinutes()).padStart(2, "0");
+    const ss = String(now.getUTCSeconds()).padStart(2, "0");
+    el.textContent = `${hh}:${mm}:${ss} ET`;
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+function showToast(msg) {
+  let t = document.getElementById("stv-toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "stv-toast";
+    t.style.cssText =
+      "position:fixed;bottom:60px;left:50%;transform:translateX(-50%);" +
+      "padding:8px 14px;background:var(--surface-3);border:1px solid var(--line);" +
+      "border-radius:var(--r-md);color:var(--ink);font-size:12px;z-index:200;" +
+      "box-shadow:var(--shadow-lift);opacity:0;transition:opacity .15s;";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  clearTimeout(t._stvHide);
+  t._stvHide = setTimeout(() => { t.style.opacity = "0"; }, 1800);
+}
+
+function bindCommandK() {
+  const btn = document.getElementById("cmd-k");
+  if (btn) btn.addEventListener("click", () => showToast("Command palette coming soon"));
+  document.addEventListener("keydown", (e) => {
+    const metaK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k";
+    if (metaK) {
+      e.preventDefault();
+      showToast("Command palette coming soon");
+    }
+  });
+}
+
+function bindThemeToggle() {
+  const btn = document.getElementById("theme-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme") || "dark";
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("stv.theme", next);
+  });
+}
+
+startClock();
+bindCommandK();
+bindThemeToggle();
