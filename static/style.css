@@ -1,25 +1,205 @@
 :root {
-  --bg:        #0b0e13;
-  --panel:     #151a23;
-  --panel-2:   #1c2230;
-  --panel-3:   #222b3a;
-  --border:    #232a39;
-  --border-hi: #2e3a50;
-  --text:      #e6e9ef;
-  --text-dim:  #8a93a6;
-  --text-faint:#4e5a6e;
-  --accent:    #4f8cff;
-  --accent-hi: #6fa0ff;
-  --up:        #26a69a;
-  --down:      #ef5350;
-  --up-soft:   rgba(38, 166, 154, 0.22);
-  --down-soft: rgba(239, 83, 80,  0.22);
-  --topbar-h:  50px;
-  --radius-sm: 4px;
-  --radius:    6px;
-  --radius-lg: 8px;
-  --shadow-modal: 0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4);
+  /* Surfaces — graduated obsidian */
+  --void:        #050506;
+  --canvas:      #0a0a0c;
+  --surface-1:   #0f1012;
+  --surface-2:   #15171a;
+  --surface-3:   #1c1f23;
+  --surface-4:   #24282d;
+
+  /* Hairlines */
+  --line-faint:  rgba(255,255,255,0.04);
+  --line-soft:   rgba(255,255,255,0.07);
+  --line:        rgba(255,255,255,0.10);
+  --line-strong: rgba(255,255,255,0.16);
+
+  /* Text */
+  --ink:         #f1f2f4;
+  --ink-mute:    #a8acb3;
+  --ink-soft:    #6c7079;
+  --ink-faint:   #44484f;
+  --ink-ghost:   #2c2f35;
+
+  /* Acid accent (electric lime) */
+  --acid:        #d4ff3a;
+  --acid-soft:   rgba(212,255,58,0.18);
+  --acid-glow:   rgba(212,255,58,0.35);
+  --acid-deep:   #9bc91c;
+  --on-acid:     #0a0a0c;
+
+  /* PnL — desaturated, refined */
+  --up:          #5fbb7e;
+  --up-soft:     rgba(95,187,126,0.16);
+  --up-glow:     rgba(95,187,126,0.32);
+  --down:        #d6635f;
+  --down-soft:   rgba(214,99,95,0.16);
+  --down-glow:   rgba(214,99,95,0.32);
+
+  /* Volume / signal palette (cool) */
+  --signal:      #6ea8ff;
+  --signal-soft: rgba(110,168,255,0.16);
+  --warn:        #e8b04a;
+  --warn-soft:   rgba(232,176,74,0.14);
+
+  /* Radii */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+
+  /* Shadows — soft, layered */
+  --shadow-1: 0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-2: 0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.5);
+  --shadow-lift: 0 1px 0 rgba(255,255,255,0.06) inset, 0 24px 60px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.4);
+
+  /* Type */
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+
+  /* Legacy aliases — kept while migrating older selectors. Remove in Task 6. */
+  --bg:         var(--canvas);
+  --panel:      var(--surface-1);
+  --panel-2:    var(--surface-2);
+  --panel-3:    var(--surface-3);
+  --border:     var(--line);
+  --border-hi:  var(--line-strong);
+  --text:       var(--ink);
+  --text-dim:   var(--ink-mute);
+  --text-faint: var(--ink-faint);
+  --accent:     var(--acid);
+  --accent-hi:  var(--acid-deep);
+  --topbar-h:   48px;
+  --radius-sm:  var(--r-sm);
+  --radius:     var(--r-md);
+  --radius-lg:  var(--r-lg);
+  --shadow-modal: var(--shadow-lift);
 }
+
+/* Reset within the trading surfaces only */
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  letter-spacing: -0.01em;
+}
+
+.mono { font-family: var(--font-mono); font-feature-settings: 'tnum', 'zero', 'ss01'; }
+.tnum { font-variant-numeric: tabular-nums; }
+.serif { font-family: var(--font-serif); }
+
+.up { color: var(--up); }
+.down { color: var(--down); }
+.muted { color: var(--ink-mute); }
+.soft { color: var(--ink-soft); }
+.faint { color: var(--ink-faint); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 22px; padding: 0 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  font-size: 11px;
+  color: var(--ink-mute);
+  letter-spacing: 0.01em;
+}
+.pill.acid { background: var(--acid-soft); border-color: transparent; color: var(--acid); }
+.pill.up   { background: var(--up-soft);   border-color: transparent; color: var(--up); }
+.pill.down { background: var(--down-soft); border-color: transparent; color: var(--down); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  font-size: 11px; color: var(--ink-mute);
+  cursor: pointer; transition: background .12s, border-color .12s, color .12s;
+}
+.chip:hover { background: var(--surface-3); color: var(--ink); border-color: var(--line); }
+.chip.on   { background: var(--surface-3); color: var(--ink); border-color: var(--line); }
+
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 4px;
+  background: var(--surface-3); border: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--ink-mute);
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(28,31,35,0.86), rgba(15,16,18,0.86));
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--shadow-2);
+}
+
+@keyframes stv-pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%     { opacity: 0.4; transform: scale(0.85); }
+}
+.live-dot {
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--up); box-shadow: 0 0 8px var(--up-glow);
+  animation: stv-pulse 2.2s ease-in-out infinite;
+}
+
+/* ── Light theme ─────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --void:        #1a1a1a;
+  --canvas:      #fbfaf6;
+  --surface-1:   #ffffff;
+  --surface-2:   #f3f1ea;
+  --surface-3:   #e6e2d6;
+  --surface-4:   #d4cfbe;
+
+  --line-faint:  rgba(0,0,0,0.04);
+  --line-soft:   rgba(0,0,0,0.08);
+  --line:        rgba(0,0,0,0.12);
+  --line-strong: rgba(0,0,0,0.20);
+
+  --ink:         #15171a;
+  --ink-mute:    #4a4d52;
+  --ink-soft:    #7a7d82;
+  --ink-faint:   #abaeb2;
+  --ink-ghost:   #d2cebe;
+
+  --acid:        #6b8e00;
+  --acid-soft:   rgba(107,142,0,0.12);
+  --acid-glow:   rgba(107,142,0,0.32);
+  --acid-deep:   #4a6500;
+  --on-acid:     #ffffff;
+
+  --up:          #2d7d4d;
+  --up-soft:     rgba(45,125,77,0.12);
+  --up-glow:     rgba(45,125,77,0.30);
+  --down:        #c0413d;
+  --down-soft:   rgba(192,65,61,0.12);
+  --down-glow:   rgba(192,65,61,0.32);
+
+  --signal:      #2a5fc8;
+  --signal-soft: rgba(42,95,200,0.10);
+  --warn:        #a47318;
+  --warn-soft:   rgba(164,115,24,0.12);
+
+  --shadow-1:    0 1px 2px rgba(0,0,0,0.06);
+  --shadow-2:    0 1px 0 rgba(255,255,255,0.4) inset, 0 6px 20px rgba(0,0,0,0.07);
+  --shadow-lift: 0 1px 0 rgba(255,255,255,0.5) inset, 0 20px 50px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.05);
+}
+
+[data-theme="light"] .glass {
+  background: linear-gradient(180deg, rgba(255,255,254,0.86), rgba(248,247,243,0.86));
+  border-color: rgba(0,0,0,0.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 8px 24px rgba(0,0,0,0.06);
+}
+
+[data-theme="light"] input,
+[data-theme="light"] select { color-scheme: light; }
 
 * { box-sizing: border-box; }
 

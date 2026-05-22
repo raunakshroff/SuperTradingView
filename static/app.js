@@ -5,6 +5,12 @@
  * the Flask SSE bridge. Layout + per-pane state persisted in localStorage.
  */
 
+// --- Theme bootstrap (must run before chart init) ---------------------------
+(function () {
+  const t = localStorage.getItem("stv.theme") || "dark";
+  document.documentElement.setAttribute("data-theme", t);
+})();
+
 const COUNT_LAYOUTS = {
   1: { cols: 1, rows: 1 },
   2: { cols: 2, rows: 1 },
