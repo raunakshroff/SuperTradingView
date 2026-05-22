@@ -44,49 +44,22 @@
       <span class="clock-time mono tnum" id="clock-time">--:--:-- ET</span>
     </div>
 
-    <!-- Visual grid-layout switcher (replaced by popover in Task 5) -->
-    <div class="layout-switcher" id="layout-switcher" role="group" aria-label="Chart layout">
-      <button class="layout-btn" data-count="1" title="Single chart" type="button">
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
-          <rect x="1" y="1" width="14" height="10" rx="1.5"/>
+    <div class="layout-popover-wrap" id="layout-popover-wrap">
+      <button class="layout-trigger" id="layout-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+        <span class="layout-trigger-icon" id="layout-trigger-icon"></span>
+        <span class="layout-trigger-count mono tnum" id="layout-trigger-count">4</span>
+        <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M2 3.5 L4.5 6 L7 3.5"/>
         </svg>
       </button>
-      <button class="layout-btn" data-count="2" title="2 charts" type="button">
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
-          <rect x="1" y="1" width="6" height="10" rx="1.5"/>
-          <rect x="9" y="1" width="6" height="10" rx="1.5"/>
-        </svg>
-      </button>
-      <button class="layout-btn" data-count="4" title="4 charts" type="button">
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
-          <rect x="1" y="1" width="6" height="4" rx="1"/>
-          <rect x="9" y="1" width="6" height="4" rx="1"/>
-          <rect x="1" y="7" width="6" height="4" rx="1"/>
-          <rect x="9" y="7" width="6" height="4" rx="1"/>
-        </svg>
-      </button>
-      <button class="layout-btn" data-count="6" title="6 charts" type="button">
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
-          <rect x="1"    y="1" width="3.5" height="4" rx="0.8"/>
-          <rect x="6.25" y="1" width="3.5" height="4" rx="0.8"/>
-          <rect x="11.5" y="1" width="3.5" height="4" rx="0.8"/>
-          <rect x="1"    y="7" width="3.5" height="4" rx="0.8"/>
-          <rect x="6.25" y="7" width="3.5" height="4" rx="0.8"/>
-          <rect x="11.5" y="7" width="3.5" height="4" rx="0.8"/>
-        </svg>
-      </button>
-      <button class="layout-btn" data-count="8" title="8 charts" type="button">
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
-          <rect x="1"    y="1" width="2.5" height="4" rx="0.6"/>
-          <rect x="4.5"  y="1" width="2.5" height="4" rx="0.6"/>
-          <rect x="8"    y="1" width="2.5" height="4" rx="0.6"/>
-          <rect x="11.5" y="1" width="2.5" height="4" rx="0.6"/>
-          <rect x="1"    y="7" width="2.5" height="4" rx="0.6"/>
-          <rect x="4.5"  y="7" width="2.5" height="4" rx="0.6"/>
-          <rect x="8"    y="7" width="2.5" height="4" rx="0.6"/>
-          <rect x="11.5" y="7" width="2.5" height="4" rx="0.6"/>
-        </svg>
-      </button>
+      <div class="layout-popover glass" id="layout-popover" hidden>
+        <div class="layout-popover-title">Chart layout</div>
+        <div class="layout-popover-grid" id="layout-popover-grid"></div>
+        <div class="layout-popover-foot">
+          <span>Hold <span class="kbd">⌘</span> + <span class="kbd">1-7</span></span>
+          <span>Max 8 panes</span>
+        </div>
+      </div>
     </div>
 
     <!-- Theme toggle -->

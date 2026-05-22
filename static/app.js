@@ -11,13 +11,16 @@
   document.documentElement.setAttribute("data-theme", t);
 })();
 
-const COUNT_LAYOUTS = {
-  1: { cols: 1, rows: 1 },
-  2: { cols: 2, rows: 1 },
-  4: { cols: 2, rows: 2 },
-  6: { cols: 3, rows: 2 },
-  8: { cols: 4, rows: 2 },
-};
+const LAYOUTS = [
+  { id: 1, n: 1, label: "1 up",  cols: "1fr",             rows: "1fr",     areas: '"a"' },
+  { id: 2, n: 2, label: "2 H",   cols: "1fr 1fr",         rows: "1fr",     areas: '"a b"' },
+  { id: 3, n: 2, label: "2 V",   cols: "1fr",             rows: "1fr 1fr", areas: '"a" "b"' },
+  { id: 4, n: 3, label: "1+2",   cols: "2fr 1fr",         rows: "1fr 1fr", areas: '"a b" "a c"' },
+  { id: 5, n: 4, label: "2×2",   cols: "1fr 1fr",         rows: "1fr 1fr", areas: '"a b" "c d"' },
+  { id: 6, n: 6, label: "3×2",   cols: "1fr 1fr 1fr",     rows: "1fr 1fr", areas: '"a b c" "d e f"' },
+  { id: 7, n: 8, label: "4×2",   cols: "1fr 1fr 1fr 1fr", rows: "1fr 1fr", areas: '"a b c d" "e f g h"' },
+];
+const AREA_KEYS = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
 const DEFAULT_PANES = [
   { source: "hyperliquid", symbol: "BTC",         tf: "1m", indicators: {} },
@@ -33,6 +36,7 @@ const DEFAULT_PANES = [
 
 const LS_COUNT = "stv.chartCount";
 const LS_PANES = "stv.panes";
+const LS_LAYOUT_ID = "stv.layoutId";
 
 // Returns the base indicator def-id from an instance key.
 // "sma"        → "sma"   (single instance uses bare id for backward compat)
@@ -875,13 +879,11 @@ class Pane {
 // --- Grid management --------------------------------------------------------
 
 const gridEl = document.getElementById("grid");
-let currentCount = 4;   // tracks which layout button is active
+let currentLayoutId = 5;
 let panes = [];
 let paneStates = [];
 
 function loadState() {
-  const c = parseInt(localStorage.getItem(LS_COUNT) || "4", 10);
-  const count = COUNT_LAYOUTS[c] ? c : 4;
   let states;
   try {
     states = JSON.parse(localStorage.getItem(LS_PANES) || "null");
@@ -895,52 +897,164 @@ function loadState() {
       states[i].indicators = {};
     }
   }
-  return { count, states };
+  return { states };
 }
 
 function saveState() {
   for (let i = 0; i < panes.length; i++) paneStates[i] = panes[i].state;
   localStorage.setItem(LS_PANES, JSON.stringify(paneStates));
-  localStorage.setItem(LS_COUNT, String(currentCount));
+  localStorage.setItem(LS_LAYOUT_ID, String(currentLayoutId));
 }
 
-function applyLayout(count) {
-  const layout = COUNT_LAYOUTS[count] || COUNT_LAYOUTS[4];
-  gridEl.style.setProperty("--cols", layout.cols);
-  gridEl.style.setProperty("--rows", layout.rows);
+function getLayout(id) {
+  return LAYOUTS.find((l) => l.id === id) || LAYOUTS[4];
 }
 
-function buildPanes(count) {
+function applyLayout(layoutId) {
+  const layout = getLayout(layoutId);
+  gridEl.style.display = "grid";
+  gridEl.style.gridTemplateColumns = layout.cols;
+  gridEl.style.gridTemplateRows = layout.rows;
+  gridEl.style.gridTemplateAreas = layout.areas;
+  gridEl.style.gap = "10px";
+}
+
+function buildPanes(layoutId) {
+  const layout = getLayout(layoutId);
   for (const p of panes) p.destroy();
   panes = [];
   gridEl.innerHTML = "";
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < layout.n; i++) {
     const state = paneStates[i] || { ...DEFAULT_PANES[i % DEFAULT_PANES.length] };
-    panes.push(new Pane(i, gridEl, state));
+    const pane = new Pane(i, gridEl, state);
+    if (pane.root) pane.root.style.gridArea = AREA_KEYS[i];
+    panes.push(pane);
   }
-  // Resize after the grid lays out
   requestAnimationFrame(() => {
     for (const p of panes) p.resize();
   });
 }
 
-function setActiveLayoutBtn(count) {
-  document.querySelectorAll(".layout-btn").forEach((btn) => {
-    btn.classList.toggle("active", parseInt(btn.dataset.count, 10) === count);
+function layoutIconSVG(layout, size = 14) {
+  const colSizes = layout.cols.split(" ").map((c) => parseFloat(c) || 1);
+  const rowSizes = layout.rows.split(" ").map((r) => parseFloat(r) || 1);
+  const cSum = colSizes.reduce((a, b) => a + b, 0);
+  const rSum = rowSizes.reduce((a, b) => a + b, 0);
+  const totW = 12, totH = 12;
+  const cellW = colSizes.map((c) => (c / cSum) * totW);
+  const cellH = rowSizes.map((r) => (r / rSum) * totH);
+  const gridStr = layout.areas.replace(/"/g, " ").replace(/\s+/g, " ").trim().split(" ");
+  const nCols = colSizes.length;
+  const seen = {};
+  const rects = [];
+  gridStr.forEach((name) => {
+    if (seen[name]) return; seen[name] = true;
+    let rMin = 99, rMax = -1, cMin = 99, cMax = -1;
+    gridStr.forEach((n2, j) => {
+      if (n2 !== name) return;
+      const rr = Math.floor(j / nCols), cc = j % nCols;
+      if (rr < rMin) rMin = rr; if (rr > rMax) rMax = rr;
+      if (cc < cMin) cMin = cc; if (cc > cMax) cMax = cc;
+    });
+    let x = 1, y = 1;
+    for (let i = 0; i < cMin; i++) x += cellW[i];
+    for (let i = 0; i < rMin; i++) y += cellH[i];
+    let w = 0; for (let i = cMin; i <= cMax; i++) w += cellW[i];
+    let h = 0; for (let i = rMin; i <= rMax; i++) h += cellH[i];
+    rects.push(`<rect x="${(x + 0.5).toFixed(2)}" y="${(y + 0.5).toFixed(2)}" width="${(w - 1).toFixed(2)}" height="${(h - 1).toFixed(2)}" rx="1" fill="currentColor" fill-opacity="0.7"/>`);
   });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 14 14"><rect x="0.5" y="0.5" width="13" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-opacity="0.4"/>${rects.join("")}</svg>`;
 }
 
-document.getElementById("layout-switcher").addEventListener("click", (e) => {
-  const btn = e.target.closest(".layout-btn");
-  if (!btn) return;
-  const count = parseInt(btn.dataset.count, 10);
-  if (!COUNT_LAYOUTS[count] || count === currentCount) return;
-  currentCount = count;
-  setActiveLayoutBtn(count);
-  applyLayout(count);
-  buildPanes(count);
-  saveState();
-});
+function migrateLayoutState() {
+  const newKey = localStorage.getItem(LS_LAYOUT_ID);
+  if (newKey != null) {
+    const id = parseInt(newKey, 10);
+    return getLayout(id).id;
+  }
+  const legacy = parseInt(localStorage.getItem(LS_COUNT) || "4", 10);
+  const map = { 1: 1, 2: 2, 4: 5, 6: 6, 8: 7 };
+  const id = map[legacy] || 5;
+  localStorage.setItem(LS_LAYOUT_ID, String(id));
+  return id;
+}
+
+function setLayoutId(id, persist = true) {
+  const layout = getLayout(id);
+  currentLayoutId = layout.id;
+  applyLayout(currentLayoutId);
+  buildPanes(currentLayoutId);
+  if (persist) {
+    localStorage.setItem(LS_LAYOUT_ID, String(currentLayoutId));
+    saveState();
+  }
+  refreshLayoutTrigger();
+  refreshLayoutPopover();
+}
+
+function refreshLayoutTrigger() {
+  const layout = getLayout(currentLayoutId);
+  const iconEl = document.getElementById("layout-trigger-icon");
+  const countEl = document.getElementById("layout-trigger-count");
+  if (iconEl) iconEl.innerHTML = layoutIconSVG(layout, 14);
+  if (countEl) countEl.textContent = String(layout.n);
+}
+
+function refreshLayoutPopover() {
+  const grid = document.getElementById("layout-popover-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  for (const l of LAYOUTS) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "layout-preset" + (l.id === currentLayoutId ? " on" : "");
+    btn.title = l.label;
+    btn.dataset.id = String(l.id);
+    btn.innerHTML = `${layoutIconSVG(l, 22)}<span class="layout-preset-count mono tnum">${l.n}</span>`;
+    btn.addEventListener("click", () => {
+      setLayoutId(l.id);
+      closeLayoutPopover();
+    });
+    grid.appendChild(btn);
+  }
+}
+
+function openLayoutPopover() {
+  const pop = document.getElementById("layout-popover");
+  const trig = document.getElementById("layout-trigger");
+  if (pop) pop.hidden = false;
+  if (trig) trig.setAttribute("aria-expanded", "true");
+}
+function closeLayoutPopover() {
+  const pop = document.getElementById("layout-popover");
+  if (pop) pop.hidden = true;
+  const trig = document.getElementById("layout-trigger");
+  if (trig) trig.setAttribute("aria-expanded", "false");
+}
+
+function bindLayoutPopover() {
+  const trig = document.getElementById("layout-trigger");
+  if (trig) {
+    trig.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pop = document.getElementById("layout-popover");
+      const open = pop && pop.hidden === false;
+      if (open) closeLayoutPopover(); else openLayoutPopover();
+    });
+  }
+  document.addEventListener("click", (e) => {
+    const wrap = document.getElementById("layout-popover-wrap");
+    if (wrap && !wrap.contains(e.target)) closeLayoutPopover();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 7) {
+      e.preventDefault();
+      setLayoutId(n);
+    }
+  });
+}
 
 window.addEventListener("resize", () => {
   for (const p of panes) p.resize();
@@ -1166,12 +1280,14 @@ function renderIndicatorsModal() {
 
 (async function main() {
   await loadSymbols();
-  const { count, states } = loadState();
+  const { states } = loadState();
   paneStates = states;
-  currentCount = count;
-  setActiveLayoutBtn(count);
-  applyLayout(count);
-  buildPanes(count);
+  currentLayoutId = migrateLayoutState();
+  applyLayout(currentLayoutId);
+  buildPanes(currentLayoutId);
+  refreshLayoutTrigger();
+  refreshLayoutPopover();
+  bindLayoutPopover();
 
   document.addEventListener("stv:drawing-prefs-changed", () => {
     const prefs = Drawings.PrefsStore.get();
