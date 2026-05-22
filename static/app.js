@@ -1056,6 +1056,66 @@ function bindLayoutPopover() {
   });
 }
 
+// --- Personality presets ----------------------------------------------------
+const PERSONALITY_DEFAULTS = {
+  Minimalist: { layoutId: 1, syms: [{ source: "yfinance", symbol: "NVDA" }], tf: "1D" },
+  Quant:      { layoutId: 5, syms: [
+    { source: "yfinance", symbol: "SPY" },
+    { source: "yfinance", symbol: "NVDA" },
+    { source: "yfinance", symbol: "TLT" },
+    { source: "yfinance", symbol: "^VIX" },
+  ], tf: "1h" },
+  Scalper:    { layoutId: 5, syms: [
+    { source: "yfinance", symbol: "ES=F" },
+    { source: "yfinance", symbol: "NQ=F" },
+    { source: "yfinance", symbol: "NVDA" },
+    { source: "yfinance", symbol: "TSLA" },
+  ], tf: "5m" },
+  Investor:   { layoutId: 4, syms: [
+    { source: "yfinance", symbol: "SPY" },
+    { source: "yfinance", symbol: "TLT" },
+    { source: "yfinance", symbol: "GLD" },
+  ], tf: "1D" },
+};
+
+const LS_PERSONALITY = "stv.personality";
+
+function currentPersonality() {
+  return localStorage.getItem(LS_PERSONALITY) || "Quant";
+}
+
+function applyPersonality(name) {
+  const preset = PERSONALITY_DEFAULTS[name];
+  if (!preset) return;
+  // Replace pane state for the visible slots — preserve indicators per-slot.
+  for (let i = 0; i < preset.syms.length; i++) {
+    const prev = paneStates[i] || { indicators: {} };
+    paneStates[i] = {
+      source: preset.syms[i].source,
+      symbol: preset.syms[i].symbol,
+      tf: preset.tf,
+      indicators: prev.indicators || {},
+    };
+  }
+  localStorage.setItem(LS_PERSONALITY, name);
+  setLayoutId(preset.layoutId);
+  refreshPersonalityButtons();
+}
+
+function refreshPersonalityButtons() {
+  const cur = currentPersonality();
+  document.querySelectorAll(".pers-btn").forEach((btn) => {
+    btn.classList.toggle("on", btn.dataset.pers === cur);
+  });
+}
+
+function bindPersonality() {
+  document.querySelectorAll(".pers-btn").forEach((btn) => {
+    btn.addEventListener("click", () => applyPersonality(btn.dataset.pers));
+  });
+  refreshPersonalityButtons();
+}
+
 window.addEventListener("resize", () => {
   for (const p of panes) p.resize();
 });
@@ -1288,6 +1348,12 @@ function renderIndicatorsModal() {
   refreshLayoutTrigger();
   refreshLayoutPopover();
   bindLayoutPopover();
+  bindPersonality();
+
+  // First run? Apply default personality (Quant) to seed states.
+  if (!localStorage.getItem(LS_PERSONALITY)) {
+    applyPersonality("Quant");
+  }
 
   document.addEventListener("stv:drawing-prefs-changed", () => {
     const prefs = Drawings.PrefsStore.get();
