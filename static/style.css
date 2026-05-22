@@ -1049,3 +1049,69 @@ html, body {
   font-size: 10px;
   color: var(--ink-soft);
 }
+
+/* ── Rail cards ──────────────────────────────────────────────────────── */
+.card {
+  border-radius: var(--r-lg);
+  padding: 14px;
+  flex-shrink: 0;
+}
+
+.card-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.card-title-text { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+.card-title-sub { font-size: 10px; color: var(--ink-soft); }
+
+.card-empty {
+  font-size: 11px;
+  color: var(--ink-soft);
+  padding: 8px 0;
+  text-align: center;
+}
+
+.chip-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 0 2px 8px;
+}
+
+.narratives-list { display: flex; flex-direction: column; gap: 1px; }
+
+.narrative-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 70px 60px;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  text-align: left;
+  font-family: inherit;
+  transition: background .12s;
+}
+.narrative-row:hover { background: var(--surface-2); }
+.narrative-sym { font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+.narrative-spark { height: 24px; position: relative; }
+.narrative-price {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  text-align: right;
+  color: var(--ink);
+}
+.narrative-chg {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  text-align: right;
+}
+.narrative-chg.up { color: var(--up); }
+.narrative-chg.down { color: var(--down); }

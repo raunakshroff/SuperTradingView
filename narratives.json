@@ -1,0 +1,83 @@
+{
+  "narratives": [
+    {
+      "id": "ai",
+      "title": "AI boom",
+      "desc": "Compute + inference scale-out",
+      "symbols": [
+        {"source": "yfinance", "symbol": "NVDA"},
+        {"source": "yfinance", "symbol": "AMD"},
+        {"source": "yfinance", "symbol": "AVGO"},
+        {"source": "yfinance", "symbol": "SMCI"},
+        {"source": "yfinance", "symbol": "PLTR"},
+        {"source": "yfinance", "symbol": "ARM"}
+      ]
+    },
+    {
+      "id": "energy",
+      "title": "Energy cycle",
+      "desc": "Upstream + services + integrated",
+      "symbols": [
+        {"source": "yfinance", "symbol": "XOM"},
+        {"source": "yfinance", "symbol": "CVX"},
+        {"source": "yfinance", "symbol": "OXY"},
+        {"source": "yfinance", "symbol": "SLB"},
+        {"source": "yfinance", "symbol": "COP"},
+        {"source": "yfinance", "symbol": "EOG"}
+      ]
+    },
+    {
+      "id": "war",
+      "title": "War risk",
+      "desc": "Defense primes + contractors",
+      "symbols": [
+        {"source": "yfinance", "symbol": "LMT"},
+        {"source": "yfinance", "symbol": "NOC"},
+        {"source": "yfinance", "symbol": "RTX"},
+        {"source": "yfinance", "symbol": "GD"},
+        {"source": "yfinance", "symbol": "HII"},
+        {"source": "yfinance", "symbol": "LDOS"}
+      ]
+    },
+    {
+      "id": "cuts",
+      "title": "Rate cuts",
+      "desc": "Long-duration + rate-sensitives",
+      "symbols": [
+        {"source": "yfinance", "symbol": "TLT"},
+        {"source": "yfinance", "symbol": "HYG"},
+        {"source": "yfinance", "symbol": "XLU"},
+        {"source": "yfinance", "symbol": "XLRE"},
+        {"source": "yfinance", "symbol": "IYR"},
+        {"source": "yfinance", "symbol": "VNQ"}
+      ]
+    },
+    {
+      "id": "reflation",
+      "title": "Reflation",
+      "desc": "Industrials + materials + miners",
+      "symbols": [
+        {"source": "yfinance", "symbol": "CAT"},
+        {"source": "yfinance", "symbol": "DE"},
+        {"source": "yfinance", "symbol": "FCX"},
+        {"source": "yfinance", "symbol": "VALE"},
+        {"source": "yfinance", "symbol": "X"},
+        {"source": "yfinance", "symbol": "NUE"}
+      ]
+    },
+    {
+      "id": "mag7",
+      "title": "Mag 7",
+      "desc": "Megacap tech basket",
+      "symbols": [
+        {"source": "yfinance", "symbol": "AAPL"},
+        {"source": "yfinance", "symbol": "MSFT"},
+        {"source": "yfinance", "symbol": "GOOGL"},
+        {"source": "yfinance", "symbol": "AMZN"},
+        {"source": "yfinance", "symbol": "NVDA"},
+        {"source": "yfinance", "symbol": "META"},
+        {"source": "yfinance", "symbol": "TSLA"}
+      ]
+    }
+  ]
+}

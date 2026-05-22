@@ -19,10 +19,12 @@ from data_source import (
     list_sources,
     load_symbols,
 )
+from services.narratives import list_narratives
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
 SYMBOLS_FILE = BASE_DIR / "symbols.json"
+NARRATIVES_FILE = BASE_DIR / "narratives.json"
 
 app = Flask(__name__, static_folder=None)  # we serve static manually
 
@@ -87,6 +89,11 @@ def symbols():
             continue
 
     return jsonify({"symbols": merged[:50], "timeframes": TIMEFRAMES})
+
+
+@app.route("/narratives")
+def narratives():
+    return jsonify({"narratives": list_narratives(NARRATIVES_FILE)})
 
 
 # --- History -------------------------------------------------------------------
