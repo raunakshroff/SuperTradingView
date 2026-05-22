@@ -1,40 +1,45 @@
-/* Drawing layer styles. Loaded after style.css so theme tokens (var(--panel),
- * var(--border), var(--accent), etc.) are available. */
+/* Drawing layer styles. Loaded after style.css so theme tokens are available. */
 
 .draw-toolbar {
-  width: 30px;
-  background: var(--panel-2);
-  border-right: 1px solid var(--border);
+  width: 36px;
+  background: var(--surface-1);
+  border-right: 1px solid var(--line-faint);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
   padding: 6px 0;
+  gap: 2px;
   flex-shrink: 0;
 }
 
 .draw-tool {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
-  color: var(--text-dim);
-  cursor: pointer;
-  font-size: 12px;
-  background: transparent;
-  border: none;
   font-family: inherit;
-  user-select: none;
 }
-.draw-tool:hover { background: var(--border); color: var(--text); }
-.draw-tool.active { background: var(--accent); color: white; }
+.draw-tool:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+.draw-tool.active {
+  background: var(--acid-soft);
+  color: var(--acid);
+}
 
 .draw-tool-sep {
   width: 16px;
   height: 1px;
-  background: var(--border);
+  background: var(--line-faint);
+  margin: 2px 0;
 }
 
 /* When the pane is in "floating palette" mode, the left toolbar is hidden
@@ -53,17 +58,17 @@
 }
 .draw-handle.endpoint {
   background: #fff;
-  border: 2px solid var(--accent);
+  border: 2px solid var(--acid);
 }
 .draw-handle.mid {
   width: 9px;
   height: 9px;
-  background: var(--accent);
+  background: var(--acid);
   opacity: 0.9;
   cursor: move;
 }
 .draw-handle:hover {
-  background: var(--accent);
+  background: var(--acid);
   border: 2px solid #fff;
 }
 
@@ -71,7 +76,7 @@
   position: absolute;
   transform: translate(-50%, 0);
   background: rgba(21, 26, 35, 0.95);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--acid);
   border-radius: 4px;
   padding: 2px;
   display: flex;
@@ -83,11 +88,11 @@
 .dmt-btn {
   width: 22px; height: 22px;
   background: transparent; border: none;
-  color: var(--text); font-size: 11px;
+  color: var(--ink); font-size: 11px;
   cursor: pointer; border-radius: 3px;
   font-family: inherit;
 }
-.dmt-btn:hover { background: var(--accent); }
+.dmt-btn:hover { background: var(--acid); }
 .dmt-btn.danger { color: var(--down); }
 
 /* ── Drawing style modal ──────────────────────────────────────────────────── */
@@ -98,9 +103,9 @@
 .btn-danger {
   background: transparent;
   color: var(--down);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   padding: 6px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
@@ -109,17 +114,17 @@
 .btn-danger:hover { background: var(--down); color: #fff; border-color: var(--down); }
 
 .btn-secondary {
-  background: var(--panel-3);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--ink);
+  border: 1px solid var(--line);
   padding: 6px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
   transition: background 120ms ease;
 }
-.btn-secondary:hover { background: var(--border); }
+.btn-secondary:hover { background: var(--line); }
 
 .dsm-row {
   display: grid; grid-template-columns: 84px 1fr;
@@ -127,45 +132,45 @@
   border-bottom: 1px solid rgba(35,42,57,0.5);
 }
 .dsm-row:last-child { border-bottom: none; }
-.dsm-lbl { font-size: 11px; color: var(--text-dim); }
+.dsm-lbl { font-size: 11px; color: var(--ink-mute); }
 .dsm-color {
-  width: 28px; height: 18px; border-radius: 3px; border: 1px solid var(--border);
+  width: 28px; height: 18px; border-radius: 3px; border: 1px solid var(--line);
   display: inline-block; cursor: pointer; padding: 0;
 }
 .dsm-pill-row { display: flex; gap: 4px; flex-wrap: wrap; }
 .dsm-pill {
   padding: 2px 8px; border-radius: 3px; font-size: 10px;
-  background: var(--panel-2); border: 1px solid var(--border);
-  color: var(--text-dim); cursor: pointer; font-family: inherit;
+  background: var(--surface-2); border: 1px solid var(--line);
+  color: var(--ink-mute); cursor: pointer; font-family: inherit;
 }
-.dsm-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+.dsm-pill.active { background: var(--acid); color: white; border-color: var(--acid); }
 .dsm-num, .dsm-text {
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 3px;
-  padding: 4px 6px; font-size: 11px; color: var(--text); width: 100%;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px;
+  padding: 4px 6px; font-size: 11px; color: var(--ink); width: 100%;
 }
 
 .draw-ruler-readout {
   background: rgba(21, 26, 35, 0.95);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 4px;
   padding: 3px 6px;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 10px;
-  color: var(--text);
+  color: var(--ink);
   text-align: center;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
 .draw-ruler-readout .line1 { font-weight: 600; }
-.draw-ruler-readout .line2 { color: var(--text-dim); font-size: 9px; margin-top: 1px; }
+.draw-ruler-readout .line2 { color: var(--ink-mute); font-size: 9px; margin-top: 1px; }
 
 .draw-text-inline {
   background: rgba(21, 26, 35, 0.95);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--acid);
   border-radius: 3px;
   padding: 2px 6px;
   font-size: 11px;
-  color: var(--text);
+  color: var(--ink);
   font-family: inherit;
   outline: none;
   width: 140px;
@@ -175,8 +180,8 @@
 .draw-settings-pop {
   position: fixed;
   z-index: 999;
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   padding: 8px 10px;
@@ -186,22 +191,22 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: var(--text-dim);
+  color: var(--ink-mute);
   margin-bottom: 6px;
 }
 .dsp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; }
-.dsp-lbl { font-size: 11px; color: var(--text); }
+.dsp-lbl { font-size: 11px; color: var(--ink); }
 .dsp-pill-row { display: flex; gap: 4px; }
 .dsp-pill {
   padding: 2px 8px; border-radius: 3px; font-size: 10px; font-family: inherit;
-  background: var(--panel-2); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-mute); cursor: pointer;
 }
-.dsp-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+.dsp-pill.active { background: var(--acid); color: white; border-color: var(--acid); }
 
 .ph-draw-toggle {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
   padding: 2px 7px;
   border-radius: 3px;
   font-size: 13px;
@@ -214,7 +219,7 @@
   align-items: center;
   justify-content: center;
 }
-.ph-draw-toggle.active { border-color: var(--accent); color: var(--accent); }
+.ph-draw-toggle.active { border-color: var(--acid); color: var(--acid); }
 
 .draw-floating-palette {
   position: absolute;
@@ -222,7 +227,7 @@
   left: 8px;
   z-index: 5;
   background: rgba(21, 26, 35, 0.95);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 4px;
   padding: 3px;
   display: flex;
