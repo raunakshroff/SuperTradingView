@@ -71,23 +71,17 @@ class TTLCache:
                 # Trigger background recompute exactly once per key
                 revalidate_start = time.time()
                 with self._lock:
-                    lock = self._compute_locks.get(key)
-                    if lock is None:
-                        lock = threading.Lock()
-                        self._compute_locks[key] = lock
-                    # Extend the stale entry's lifetime while revalidation runs
-                    # so callers don't see MISSING during the background compute.
-                    self._store[key] = (revalidate_start + self._ttl, stale[1])
-                if lock.acquire(blocking=False):
+                    lock = self._compute_locks.setdefault(key, threading.Lock())
+                    acquired = lock.acquire(blocking=False)
+                if acquired:
                     def _bg():
                         try:
                             value = fn()
-                            # The fresh value must be observable for at least _ttl
-                            # seconds after the compute completes. If the compute
-                            # itself took longer than _ttl, add the elapsed time so
-                            # callers can always observe the result.
+                            # Freshly-computed values must outlive their compute, so a
+                            # caller after `done` always observes the new value. If the
+                            # compute took longer than _ttl, extend by the elapsed time.
                             compute_elapsed = time.time() - revalidate_start
-                            expires_at = time.time() + max(self._ttl, compute_elapsed + self._ttl)
+                            expires_at = time.time() + compute_elapsed + self._ttl
                             with self._lock:
                                 self._store[key] = (expires_at, value)
                         finally:
