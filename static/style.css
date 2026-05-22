@@ -931,3 +931,58 @@ select:focus { border-color: var(--accent); }
   transition: filter 120ms ease;
 }
 .btn-primary:hover { filter: brightness(1.12); }
+
+/* ── Workspace shell ─────────────────────────────────────────────────── */
+html, body {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+}
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  gap: 10px;
+  padding: 10px;
+  background: var(--canvas);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.grid {
+  min-width: 0;
+  min-height: 0;
+}
+
+.bottom-dock {
+  height: 36px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-top: 1px solid var(--line-faint);
+  background: var(--canvas);
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum';
+  font-size: 11px;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+/* Hide rails below 1280px — chart grid gets full width */
+@media (max-width: 1280px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  .rail { display: none; }
+}
