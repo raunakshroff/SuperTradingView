@@ -20,6 +20,7 @@ from data_source import (
     load_symbols,
 )
 from services.narratives import list_narratives
+from services.news import fetch_news
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -94,6 +95,11 @@ def symbols():
 @app.route("/narratives")
 def narratives():
     return jsonify({"narratives": list_narratives(NARRATIVES_FILE)})
+
+
+@app.route("/news")
+def news():
+    return jsonify({"news": fetch_news()})
 
 
 # --- History -------------------------------------------------------------------

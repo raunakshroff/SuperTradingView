@@ -1115,3 +1115,34 @@ html, body {
 }
 .narrative-chg.up { color: var(--up); }
 .narrative-chg.down { color: var(--down); }
+
+/* -- News tape -------------------------------------------------------- */
+.news-list { display: flex; flex-direction: column; }
+.news-row {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line-faint);
+  text-decoration: none;
+  color: inherit;
+}
+.news-row:first-child { border-top: none; }
+.news-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--ink-soft);
+  min-width: 36px;
+  flex-shrink: 0;
+}
+.news-source {
+  font-size: 9px;
+  color: var(--acid);
+  margin-right: 6px;
+  font-weight: 600;
+}
+.news-text {
+  font-size: 11px;
+  color: var(--ink-mute);
+  line-height: 1.4;
+}

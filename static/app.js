@@ -1356,6 +1356,8 @@ function renderIndicatorsModal() {
   }
 
   loadNarratives();
+  loadNews();
+  setInterval(loadNews, 5 * 60 * 1000);
 
   document.addEventListener("stv:drawing-prefs-changed", () => {
     const prefs = Drawings.PrefsStore.get();
@@ -1532,5 +1534,37 @@ async function renderNarrativesList() {
       }
     });
     wrap.appendChild(btn);
+  }
+}
+
+// --- News tape --------------------------------------------------------------
+async function loadNews() {
+  const wrap = document.getElementById("news-list");
+  if (!wrap) return;
+  try {
+    const data = await fetchJSON("/news");
+    const items = data.news || [];
+    if (items.length === 0) {
+      wrap.innerHTML = '<div class="card-empty">No news.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    for (const it of items) {
+      const a = document.createElement("a");
+      a.className = "news-row";
+      a.href = it.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.innerHTML = `
+        <span class="news-time">${it.time}</span>
+        <div>
+          <span class="news-source">${it.source}</span>
+          <span class="news-text">${it.text}</span>
+        </div>
+      `;
+      wrap.appendChild(a);
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div class="card-empty">News unavailable.</div>';
   }
 }
