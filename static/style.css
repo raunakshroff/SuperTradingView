@@ -1165,3 +1165,38 @@ html, body {
 }
 .event-dot.warn { background: var(--warn); }
 .event-label { font-size: 11px; color: var(--ink); }
+
+.factor-list { display: flex; flex-direction: column; gap: 7px; }
+.factor-row {
+  display: grid;
+  grid-template-columns: 78px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+}
+.factor-name { font-size: 11px; color: var(--ink-mute); }
+.factor-bar {
+  position: relative;
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: 2px;
+}
+.factor-bar-zero {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--line);
+}
+.factor-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+}
+.factor-z {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  text-align: right;
+}
