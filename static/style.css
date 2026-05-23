@@ -1284,3 +1284,15 @@ html, body {
 }
 .ai-ask > span:last-child { margin-left: auto; }
 .ai-ask:hover { background: var(--surface-3); color: var(--ink); }
+
+.dock-lbl { color: var(--ink-soft); }
+.dock-val { color: var(--ink); font-weight: 600; }
+.dock-val.up { color: var(--up); }
+.dock-val.down { color: var(--down); }
+.dock-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--line-faint);
+}
+.dock-spacer { flex: 1; }
+.dock-pair { display: inline-flex; align-items: center; gap: 4px; }

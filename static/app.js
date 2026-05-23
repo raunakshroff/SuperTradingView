@@ -1366,6 +1366,10 @@ function renderIndicatorsModal() {
   setInterval(loadSignals, 60 * 1000);
   refreshAIInsight();
   setInterval(refreshAIInsight, 60 * 1000);
+  loadBreadth();
+  refreshDockTilt();
+  setInterval(loadBreadth, 60 * 1000);
+  setInterval(refreshDockTilt, 5 * 60 * 1000);
 
   document.addEventListener("stv:drawing-prefs-changed", () => {
     const prefs = Drawings.PrefsStore.get();
@@ -1831,3 +1835,32 @@ document.addEventListener("keydown", (e) => {
     showToast("Copilot coming soon");
   }
 });
+
+// --- Bottom dock ------------------------------------------------------------
+async function loadBreadth() {
+  try {
+    const data = await fetchJSON("/quote/breadth");
+    const adv = document.getElementById("dock-adv");
+    const dec = document.getElementById("dock-dec");
+    const vix = document.getElementById("dock-vix");
+    const tnx = document.getElementById("dock-tnx");
+    if (adv) adv.textContent = data.adv ?? "—";
+    if (dec) dec.textContent = data.dec ?? "—";
+    if (vix) vix.textContent = data.vix != null ? data.vix.toFixed(2) : "—";
+    if (tnx) tnx.textContent = data.us10y != null ? data.us10y.toFixed(3) + "%" : "—%";
+  } catch {}
+}
+
+async function refreshDockTilt() {
+  try {
+    const data = await fetchJSON("/factors");
+    const factors = data.factors || [];
+    if (factors.length === 0) return;
+    const top = factors.slice().sort((a, b) => Math.abs(b.z) - Math.abs(a.z))[0];
+    const el = document.getElementById("dock-tilt");
+    if (el && top) {
+      const sign = top.z >= 0 ? "+" : "";
+      el.textContent = `${top.name.toLowerCase()} ${sign}${top.z.toFixed(2)}σ`;
+    }
+  } catch {}
+}
