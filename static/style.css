@@ -1296,3 +1296,14 @@ html, body {
 }
 .dock-spacer { flex: 1; }
 .dock-pair { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Light theme — drawing toolbar contrast bump */
+[data-theme="light"] .draw-tool { color: var(--ink-mute); }
+[data-theme="light"] .draw-tool:hover { background: var(--surface-3); }
+[data-theme="light"] .draw-tool.active { background: var(--acid-soft); color: var(--acid); }
+
+/* Light theme — pane border softer */
+[data-theme="light"] .pane { border-color: var(--line-soft); }
+
+/* Light theme — sparkline area opacity */
+[data-theme="light"] .narrative-spark path[fill] { opacity: 0.18; }
