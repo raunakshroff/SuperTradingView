@@ -318,35 +318,6 @@ html, body {
   user-select: none;
 }
 
-/* Existing layout switcher restyle */
-.layout-switcher {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: var(--surface-1);
-  border: 1px solid var(--line-faint);
-  border-radius: var(--r-sm);
-  padding: 3px;
-}
-.layout-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 26px;
-  background: transparent;
-  border: none;
-  border-radius: var(--r-xs);
-  color: var(--ink-soft);
-  cursor: pointer;
-  transition: background 100ms ease, color 100ms ease;
-}
-.layout-btn:hover { background: var(--surface-2); color: var(--ink); }
-.layout-btn.active {
-  background: var(--acid-soft);
-  color: var(--acid);
-}
-.layout-btn svg { display: block; }
 
 /* ── Pane chrome ─────────────────────────────────────────────────────── */
 .pane {

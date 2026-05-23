@@ -1384,12 +1384,15 @@ function renderIndicatorsModal() {
 function startClock() {
   const el = document.getElementById("clock-time");
   if (!el) return;
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
   const tick = () => {
-    const now = new Date();
-    const hh = String((now.getUTCHours() + 19) % 24).padStart(2, "0");
-    const mm = String(now.getUTCMinutes()).padStart(2, "0");
-    const ss = String(now.getUTCSeconds()).padStart(2, "0");
-    el.textContent = `${hh}:${mm}:${ss} ET`;
+    el.textContent = `${fmt.format(new Date())} ET`;
   };
   tick();
   setInterval(tick, 1000);
@@ -1567,13 +1570,21 @@ async function loadNews() {
       a.href = it.url;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
-      a.innerHTML = `
-        <span class="news-time">${it.time}</span>
-        <div>
-          <span class="news-source">${it.source}</span>
-          <span class="news-text">${it.text}</span>
-        </div>
-      `;
+      const timeEl = document.createElement("span");
+      timeEl.className = "news-time";
+      timeEl.textContent = it.time;
+      const wrap = document.createElement("div");
+      const srcEl = document.createElement("span");
+      srcEl.className = "news-source";
+      srcEl.textContent = it.source;
+      const txtEl = document.createElement("span");
+      txtEl.className = "news-text";
+      txtEl.textContent = it.text;
+      wrap.appendChild(srcEl);
+      wrap.appendChild(document.createTextNode(" "));
+      wrap.appendChild(txtEl);
+      a.appendChild(timeEl);
+      a.appendChild(wrap);
       wrap.appendChild(a);
     }
   } catch (e) {
@@ -1601,11 +1612,18 @@ async function loadEvents() {
     for (const e of items) {
       const row = document.createElement("div");
       row.className = "event-row";
-      row.innerHTML = `
-        <span class="event-when">${e.when}</span>
-        <span class="event-dot ${e.tone === "acid" ? "acid" : e.tone === "warn" ? "warn" : ""}"></span>
-        <span class="event-label">${e.label}</span>
-      `;
+      const whenEl = document.createElement("span");
+      whenEl.className = "event-when";
+      whenEl.textContent = e.when;
+      const dotEl = document.createElement("span");
+      const toneClass = e.tone === "acid" ? "acid" : e.tone === "warn" ? "warn" : "";
+      dotEl.className = "event-dot" + (toneClass ? " " + toneClass : "");
+      const labelEl = document.createElement("span");
+      labelEl.className = "event-label";
+      labelEl.textContent = e.label;
+      row.appendChild(whenEl);
+      row.appendChild(dotEl);
+      row.appendChild(labelEl);
       wrap.appendChild(row);
     }
   } catch (e) {
@@ -1666,14 +1684,27 @@ async function loadSignals() {
       row.className = "signal-row";
       const sig = s.sigma >= 0 ? `+${s.sigma.toFixed(1)}σ` : `${s.sigma.toFixed(1)}σ`;
       const sigColor = s.sigma >= 0 ? "var(--up)" : "var(--down)";
-      row.innerHTML = `
-        <span class="signal-side ${s.side}">${s.side.toUpperCase()}</span>
-        <div class="signal-body">
-          <div class="signal-sym">${s.symbol}</div>
-          <div class="signal-msg">${s.message}</div>
-        </div>
-        <span class="signal-sigma" style="color:${sigColor}">${sig}</span>
-      `;
+      const sideEl = document.createElement("span");
+      const sideClass = s.side === "long" ? "long" : "short";
+      sideEl.className = "signal-side " + sideClass;
+      sideEl.textContent = s.side.toUpperCase();
+      const bodyEl = document.createElement("div");
+      bodyEl.className = "signal-body";
+      const symEl = document.createElement("div");
+      symEl.className = "signal-sym";
+      symEl.textContent = s.symbol;
+      const msgEl = document.createElement("div");
+      msgEl.className = "signal-msg";
+      msgEl.textContent = s.message;
+      bodyEl.appendChild(symEl);
+      bodyEl.appendChild(msgEl);
+      const sigmaEl = document.createElement("span");
+      sigmaEl.className = "signal-sigma";
+      sigmaEl.style.color = sigColor;
+      sigmaEl.textContent = sig;
+      row.appendChild(sideEl);
+      row.appendChild(bodyEl);
+      row.appendChild(sigmaEl);
       wrap.appendChild(row);
     }
   } catch (e) {
