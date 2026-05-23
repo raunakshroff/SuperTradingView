@@ -1362,6 +1362,8 @@ function renderIndicatorsModal() {
   setInterval(loadEvents, 60 * 1000);
   loadFactors();
   setInterval(loadFactors, 5 * 60 * 1000);
+  loadSignals();
+  setInterval(loadSignals, 60 * 1000);
 
   document.addEventListener("stv:drawing-prefs-changed", () => {
     const prefs = Drawings.PrefsStore.get();
@@ -1636,5 +1638,39 @@ async function loadFactors() {
     }
   } catch (e) {
     wrap.innerHTML = '<div class="card-empty">Factors unavailable.</div>';
+  }
+}
+
+// --- Live signals -----------------------------------------------------------
+async function loadSignals() {
+  const wrap = document.getElementById("signals-list");
+  const countEl = document.getElementById("signals-count");
+  if (!wrap) return;
+  try {
+    const data = await fetchJSON("/signals");
+    const items = data.signals || [];
+    if (countEl) countEl.textContent = `${items.length} active`;
+    if (items.length === 0) {
+      wrap.innerHTML = '<div class="card-empty">No active signals.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    for (const s of items) {
+      const row = document.createElement("div");
+      row.className = "signal-row";
+      const sig = s.sigma >= 0 ? `+${s.sigma.toFixed(1)}σ` : `${s.sigma.toFixed(1)}σ`;
+      const sigColor = s.sigma >= 0 ? "var(--up)" : "var(--down)";
+      row.innerHTML = `
+        <span class="signal-side ${s.side}">${s.side.toUpperCase()}</span>
+        <div class="signal-body">
+          <div class="signal-sym">${s.symbol}</div>
+          <div class="signal-msg">${s.message}</div>
+        </div>
+        <span class="signal-sigma" style="color:${sigColor}">${sig}</span>
+      `;
+      wrap.appendChild(row);
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div class="card-empty">Signals unavailable.</div>';
   }
 }

@@ -21,6 +21,7 @@ from data_source import (
 )
 from services.events import list_events
 from services.factors import factors_cached
+from services.signals import signals_cached
 from services.narratives import list_narratives
 from services.news import fetch_news
 
@@ -124,6 +125,11 @@ def events():
 @app.route("/factors")
 def factors():
     return jsonify({"factors": factors_cached(_factor_universe())})
+
+
+@app.route("/signals")
+def signals():
+    return jsonify({"signals": signals_cached(_factor_universe())})
 
 
 # --- History -------------------------------------------------------------------
