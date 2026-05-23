@@ -19,6 +19,7 @@ from data_source import (
     list_sources,
     load_symbols,
 )
+from services.events import list_events
 from services.narratives import list_narratives
 from services.news import fetch_news
 
@@ -26,6 +27,7 @@ BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
 SYMBOLS_FILE = BASE_DIR / "symbols.json"
 NARRATIVES_FILE = BASE_DIR / "narratives.json"
+EVENTS_FILE = BASE_DIR / "events.json"
 
 app = Flask(__name__, static_folder=None)  # we serve static manually
 
@@ -100,6 +102,13 @@ def narratives():
 @app.route("/news")
 def news():
     return jsonify({"news": fetch_news()})
+
+
+@app.route("/events")
+def events():
+    syms_arg = request.args.get("symbols", "")
+    symbols = [s.strip() for s in syms_arg.split(",") if s.strip()]
+    return jsonify({"events": list_events(EVENTS_FILE, symbols)})
 
 
 # --- History -------------------------------------------------------------------

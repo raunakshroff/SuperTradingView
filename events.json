@@ -1,0 +1,10 @@
+{
+  "calendar": [
+    {"date": "2026-05-22", "time": "14:00", "label": "FOMC Minutes",         "tone": "warn"},
+    {"date": "2026-05-23", "time": "08:30", "label": "CPI release",          "tone": "neutral"},
+    {"date": "2026-05-23", "time": "14:00", "label": "Powell speech",        "tone": "neutral"},
+    {"date": "2026-05-24", "time": "08:30", "label": "Jobless claims",       "tone": "neutral"},
+    {"date": "2026-05-27", "time": "08:30", "label": "PCE inflation",        "tone": "warn"},
+    {"date": "2026-05-28", "time": "10:00", "label": "Consumer confidence",  "tone": "neutral"}
+  ]
+}

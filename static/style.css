@@ -1146,3 +1146,22 @@ html, body {
   color: var(--ink-mute);
   line-height: 1.4;
 }
+.events-list { display: flex; flex-direction: column; gap: 8px; }
+.event-row { display: flex; align-items: center; gap: 10px; }
+.event-when {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--ink-soft);
+  min-width: 56px;
+}
+.event-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-soft);
+}
+.event-dot.acid {
+  background: var(--acid);
+  box-shadow: 0 0 8px var(--acid-glow);
+}
+.event-dot.warn { background: var(--warn); }
+.event-label { font-size: 11px; color: var(--ink); }

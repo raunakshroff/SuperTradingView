@@ -1358,6 +1358,8 @@ function renderIndicatorsModal() {
   loadNarratives();
   loadNews();
   setInterval(loadNews, 5 * 60 * 1000);
+  loadEvents();
+  setInterval(loadEvents, 60 * 1000);
 
   document.addEventListener("stv:drawing-prefs-changed", () => {
     const prefs = Drawings.PrefsStore.get();
@@ -1566,5 +1568,37 @@ async function loadNews() {
     }
   } catch (e) {
     wrap.innerHTML = '<div class="card-empty">News unavailable.</div>';
+  }
+}
+
+// --- Events ----------------------------------------------------------------
+function paneSymbolsList() {
+  return panes.map((p) => p && p.state && p.state.symbol).filter(Boolean);
+}
+
+async function loadEvents() {
+  const wrap = document.getElementById("events-list");
+  if (!wrap) return;
+  try {
+    const syms = paneSymbolsList().join(",");
+    const data = await fetchJSON(`/events?symbols=${encodeURIComponent(syms)}`);
+    const items = data.events || [];
+    if (items.length === 0) {
+      wrap.innerHTML = '<div class="card-empty">No upcoming events.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    for (const e of items) {
+      const row = document.createElement("div");
+      row.className = "event-row";
+      row.innerHTML = `
+        <span class="event-when">${e.when}</span>
+        <span class="event-dot ${e.tone === "acid" ? "acid" : e.tone === "warn" ? "warn" : ""}"></span>
+        <span class="event-label">${e.label}</span>
+      `;
+      wrap.appendChild(row);
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div class="card-empty">Events unavailable.</div>';
   }
 }
