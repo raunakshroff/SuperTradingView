@@ -19,10 +19,27 @@ from data_source import (
     list_sources,
     load_symbols,
 )
+from services.events import list_events
+from services.factors import factors_cached
+from services.signals import signals_cached
+from services.breadth import breadth_cached
+from services.narratives import list_narratives
+from services.news import fetch_news
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
 SYMBOLS_FILE = BASE_DIR / "symbols.json"
+NARRATIVES_FILE = BASE_DIR / "narratives.json"
+EVENTS_FILE = BASE_DIR / "events.json"
+FACTOR_UNIVERSE_FILE = BASE_DIR / "factor_universe.json"
+
+
+def _factor_universe():
+    try:
+        with FACTOR_UNIVERSE_FILE.open("r", encoding="utf-8") as f:
+            return json.load(f).get("symbols", [])
+    except (OSError, json.JSONDecodeError):
+        return []
 
 app = Flask(__name__, static_folder=None)  # we serve static manually
 
@@ -87,6 +104,38 @@ def symbols():
             continue
 
     return jsonify({"symbols": merged[:50], "timeframes": TIMEFRAMES})
+
+
+@app.route("/narratives")
+def narratives():
+    return jsonify({"narratives": list_narratives(NARRATIVES_FILE)})
+
+
+@app.route("/news")
+def news():
+    return jsonify({"news": fetch_news()})
+
+
+@app.route("/events")
+def events():
+    syms_arg = request.args.get("symbols", "")
+    symbols = [s.strip() for s in syms_arg.split(",") if s.strip()]
+    return jsonify({"events": list_events(EVENTS_FILE, symbols)})
+
+
+@app.route("/factors")
+def factors():
+    return jsonify({"factors": factors_cached(_factor_universe())})
+
+
+@app.route("/signals")
+def signals():
+    return jsonify({"signals": signals_cached(_factor_universe())})
+
+
+@app.route("/quote/breadth")
+def quote_breadth():
+    return jsonify(breadth_cached(_factor_universe()))
 
 
 # --- History -------------------------------------------------------------------

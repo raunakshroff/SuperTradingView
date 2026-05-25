@@ -98,7 +98,14 @@ Undo/redo is per-pane, 50-entry stack (configurable via settings popover), in-me
 
 ### State persistence
 
-`localStorage` keys: `stv.chartCount` (int) and `stv.panes` (array indexed by pane position). Per-pane shape:
+`localStorage` keys:
+- `stv.layoutId` (int 1-7): active layout preset. New as of Phase 1; legacy `stv.chartCount` is read once on first load and migrated to `stv.layoutId` via `migrateLayoutState()` in `static/app.js`, then never written again.
+- `stv.panes` (array): per-pane state — 8 slots are always kept even when fewer panes are visible.
+- `stv.theme` ("dark" | "light"): user theme preference, applied to `<html data-theme="…">` on boot.
+- `stv.personality` ("Minimalist" | "Quant" | "Scalper" | "Investor"): active workspace personality preset. Switching applies `PERSONALITY_DEFAULTS[name].layoutId` + symbol/timeframe set to the first N pane slots while preserving per-slot indicators.
+- `stv.drawingPrefs`: per-pane drawing-tool UI preferences (toolbar mode, snap default, undo depth).
+
+Per-pane shape:
 
 ```
 { source, symbol, tf, indicators: { [id]: { ...params, colors: { [slot]: "#hex" } } } }

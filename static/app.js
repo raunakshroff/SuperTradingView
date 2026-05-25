@@ -5,13 +5,22 @@
  * the Flask SSE bridge. Layout + per-pane state persisted in localStorage.
  */
 
-const COUNT_LAYOUTS = {
-  1: { cols: 1, rows: 1 },
-  2: { cols: 2, rows: 1 },
-  4: { cols: 2, rows: 2 },
-  6: { cols: 3, rows: 2 },
-  8: { cols: 4, rows: 2 },
-};
+// --- Theme bootstrap (must run before chart init) ---------------------------
+(function () {
+  const t = localStorage.getItem("stv.theme") || "dark";
+  document.documentElement.setAttribute("data-theme", t);
+})();
+
+const LAYOUTS = [
+  { id: 1, n: 1, label: "1 up",  cols: "1fr",             rows: "1fr",     areas: '"a"' },
+  { id: 2, n: 2, label: "2 H",   cols: "1fr 1fr",         rows: "1fr",     areas: '"a b"' },
+  { id: 3, n: 2, label: "2 V",   cols: "1fr",             rows: "1fr 1fr", areas: '"a" "b"' },
+  { id: 4, n: 3, label: "1+2",   cols: "2fr 1fr",         rows: "1fr 1fr", areas: '"a b" "a c"' },
+  { id: 5, n: 4, label: "2×2",   cols: "1fr 1fr",         rows: "1fr 1fr", areas: '"a b" "c d"' },
+  { id: 6, n: 6, label: "3×2",   cols: "1fr 1fr 1fr",     rows: "1fr 1fr", areas: '"a b c" "d e f"' },
+  { id: 7, n: 8, label: "4×2",   cols: "1fr 1fr 1fr 1fr", rows: "1fr 1fr", areas: '"a b c d" "e f g h"' },
+];
+const AREA_KEYS = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
 const DEFAULT_PANES = [
   { source: "hyperliquid", symbol: "BTC",         tf: "1m", indicators: {} },
@@ -27,6 +36,7 @@ const DEFAULT_PANES = [
 
 const LS_COUNT = "stv.chartCount";
 const LS_PANES = "stv.panes";
+const LS_LAYOUT_ID = "stv.layoutId";
 
 // Returns the base indicator def-id from an instance key.
 // "sma"        → "sma"   (single instance uses bare id for backward compat)
@@ -869,13 +879,11 @@ class Pane {
 // --- Grid management --------------------------------------------------------
 
 const gridEl = document.getElementById("grid");
-let currentCount = 4;   // tracks which layout button is active
+let currentLayoutId = 5;
 let panes = [];
 let paneStates = [];
 
 function loadState() {
-  const c = parseInt(localStorage.getItem(LS_COUNT) || "4", 10);
-  const count = COUNT_LAYOUTS[c] ? c : 4;
   let states;
   try {
     states = JSON.parse(localStorage.getItem(LS_PANES) || "null");
@@ -889,52 +897,224 @@ function loadState() {
       states[i].indicators = {};
     }
   }
-  return { count, states };
+  return { states };
 }
 
 function saveState() {
   for (let i = 0; i < panes.length; i++) paneStates[i] = panes[i].state;
   localStorage.setItem(LS_PANES, JSON.stringify(paneStates));
-  localStorage.setItem(LS_COUNT, String(currentCount));
+  localStorage.setItem(LS_LAYOUT_ID, String(currentLayoutId));
 }
 
-function applyLayout(count) {
-  const layout = COUNT_LAYOUTS[count] || COUNT_LAYOUTS[4];
-  gridEl.style.setProperty("--cols", layout.cols);
-  gridEl.style.setProperty("--rows", layout.rows);
+function getLayout(id) {
+  return LAYOUTS.find((l) => l.id === id) || LAYOUTS[4];
 }
 
-function buildPanes(count) {
+function applyLayout(layoutId) {
+  const layout = getLayout(layoutId);
+  gridEl.style.display = "grid";
+  gridEl.style.gridTemplateColumns = layout.cols;
+  gridEl.style.gridTemplateRows = layout.rows;
+  gridEl.style.gridTemplateAreas = layout.areas;
+  gridEl.style.gap = "10px";
+}
+
+function buildPanes(layoutId) {
+  const layout = getLayout(layoutId);
   for (const p of panes) p.destroy();
   panes = [];
   gridEl.innerHTML = "";
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < layout.n; i++) {
     const state = paneStates[i] || { ...DEFAULT_PANES[i % DEFAULT_PANES.length] };
-    panes.push(new Pane(i, gridEl, state));
+    const pane = new Pane(i, gridEl, state);
+    if (pane.root) pane.root.style.gridArea = AREA_KEYS[i];
+    panes.push(pane);
   }
-  // Resize after the grid lays out
   requestAnimationFrame(() => {
     for (const p of panes) p.resize();
   });
 }
 
-function setActiveLayoutBtn(count) {
-  document.querySelectorAll(".layout-btn").forEach((btn) => {
-    btn.classList.toggle("active", parseInt(btn.dataset.count, 10) === count);
+function layoutIconSVG(layout, size = 14) {
+  const colSizes = layout.cols.split(" ").map((c) => parseFloat(c) || 1);
+  const rowSizes = layout.rows.split(" ").map((r) => parseFloat(r) || 1);
+  const cSum = colSizes.reduce((a, b) => a + b, 0);
+  const rSum = rowSizes.reduce((a, b) => a + b, 0);
+  const totW = 12, totH = 12;
+  const cellW = colSizes.map((c) => (c / cSum) * totW);
+  const cellH = rowSizes.map((r) => (r / rSum) * totH);
+  const gridStr = layout.areas.replace(/"/g, " ").replace(/\s+/g, " ").trim().split(" ");
+  const nCols = colSizes.length;
+  const seen = {};
+  const rects = [];
+  gridStr.forEach((name) => {
+    if (seen[name]) return; seen[name] = true;
+    let rMin = 99, rMax = -1, cMin = 99, cMax = -1;
+    gridStr.forEach((n2, j) => {
+      if (n2 !== name) return;
+      const rr = Math.floor(j / nCols), cc = j % nCols;
+      if (rr < rMin) rMin = rr; if (rr > rMax) rMax = rr;
+      if (cc < cMin) cMin = cc; if (cc > cMax) cMax = cc;
+    });
+    let x = 1, y = 1;
+    for (let i = 0; i < cMin; i++) x += cellW[i];
+    for (let i = 0; i < rMin; i++) y += cellH[i];
+    let w = 0; for (let i = cMin; i <= cMax; i++) w += cellW[i];
+    let h = 0; for (let i = rMin; i <= rMax; i++) h += cellH[i];
+    rects.push(`<rect x="${(x + 0.5).toFixed(2)}" y="${(y + 0.5).toFixed(2)}" width="${(w - 1).toFixed(2)}" height="${(h - 1).toFixed(2)}" rx="1" fill="currentColor" fill-opacity="0.7"/>`);
+  });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 14 14"><rect x="0.5" y="0.5" width="13" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-opacity="0.4"/>${rects.join("")}</svg>`;
+}
+
+function migrateLayoutState() {
+  const newKey = localStorage.getItem(LS_LAYOUT_ID);
+  if (newKey != null) {
+    const id = parseInt(newKey, 10);
+    return getLayout(id).id;
+  }
+  const legacy = parseInt(localStorage.getItem(LS_COUNT) || "4", 10);
+  const map = { 1: 1, 2: 2, 4: 5, 6: 6, 8: 7 };
+  const id = map[legacy] || 5;
+  localStorage.setItem(LS_LAYOUT_ID, String(id));
+  return id;
+}
+
+function setLayoutId(id, persist = true) {
+  const layout = getLayout(id);
+  currentLayoutId = layout.id;
+  applyLayout(currentLayoutId);
+  buildPanes(currentLayoutId);
+  if (persist) {
+    localStorage.setItem(LS_LAYOUT_ID, String(currentLayoutId));
+    saveState();
+  }
+  refreshLayoutTrigger();
+  refreshLayoutPopover();
+}
+
+function refreshLayoutTrigger() {
+  const layout = getLayout(currentLayoutId);
+  const iconEl = document.getElementById("layout-trigger-icon");
+  const countEl = document.getElementById("layout-trigger-count");
+  if (iconEl) iconEl.innerHTML = layoutIconSVG(layout, 14);
+  if (countEl) countEl.textContent = String(layout.n);
+}
+
+function refreshLayoutPopover() {
+  const grid = document.getElementById("layout-popover-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  for (const l of LAYOUTS) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "layout-preset" + (l.id === currentLayoutId ? " on" : "");
+    btn.title = l.label;
+    btn.dataset.id = String(l.id);
+    btn.innerHTML = `${layoutIconSVG(l, 22)}<span class="layout-preset-count mono tnum">${l.n}</span>`;
+    btn.addEventListener("click", () => {
+      setLayoutId(l.id);
+      closeLayoutPopover();
+    });
+    grid.appendChild(btn);
+  }
+}
+
+function openLayoutPopover() {
+  const pop = document.getElementById("layout-popover");
+  const trig = document.getElementById("layout-trigger");
+  if (pop) pop.hidden = false;
+  if (trig) trig.setAttribute("aria-expanded", "true");
+}
+function closeLayoutPopover() {
+  const pop = document.getElementById("layout-popover");
+  if (pop) pop.hidden = true;
+  const trig = document.getElementById("layout-trigger");
+  if (trig) trig.setAttribute("aria-expanded", "false");
+}
+
+function bindLayoutPopover() {
+  const trig = document.getElementById("layout-trigger");
+  if (trig) {
+    trig.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pop = document.getElementById("layout-popover");
+      const open = pop && pop.hidden === false;
+      if (open) closeLayoutPopover(); else openLayoutPopover();
+    });
+  }
+  document.addEventListener("click", (e) => {
+    const wrap = document.getElementById("layout-popover-wrap");
+    if (wrap && !wrap.contains(e.target)) closeLayoutPopover();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 7) {
+      e.preventDefault();
+      setLayoutId(n);
+    }
   });
 }
 
-document.getElementById("layout-switcher").addEventListener("click", (e) => {
-  const btn = e.target.closest(".layout-btn");
-  if (!btn) return;
-  const count = parseInt(btn.dataset.count, 10);
-  if (!COUNT_LAYOUTS[count] || count === currentCount) return;
-  currentCount = count;
-  setActiveLayoutBtn(count);
-  applyLayout(count);
-  buildPanes(count);
-  saveState();
-});
+// --- Personality presets ----------------------------------------------------
+const PERSONALITY_DEFAULTS = {
+  Minimalist: { layoutId: 1, syms: [{ source: "yfinance", symbol: "NVDA" }], tf: "1D" },
+  Quant:      { layoutId: 5, syms: [
+    { source: "yfinance", symbol: "SPY" },
+    { source: "yfinance", symbol: "NVDA" },
+    { source: "yfinance", symbol: "TLT" },
+    { source: "yfinance", symbol: "^VIX" },
+  ], tf: "1h" },
+  Scalper:    { layoutId: 5, syms: [
+    { source: "yfinance", symbol: "ES=F" },
+    { source: "yfinance", symbol: "NQ=F" },
+    { source: "yfinance", symbol: "NVDA" },
+    { source: "yfinance", symbol: "TSLA" },
+  ], tf: "5m" },
+  Investor:   { layoutId: 4, syms: [
+    { source: "yfinance", symbol: "SPY" },
+    { source: "yfinance", symbol: "TLT" },
+    { source: "yfinance", symbol: "GLD" },
+  ], tf: "1D" },
+};
+
+const LS_PERSONALITY = "stv.personality";
+
+function currentPersonality() {
+  return localStorage.getItem(LS_PERSONALITY) || "Quant";
+}
+
+function applyPersonality(name) {
+  const preset = PERSONALITY_DEFAULTS[name];
+  if (!preset) return;
+  // Replace pane state for the visible slots — preserve indicators per-slot.
+  for (let i = 0; i < preset.syms.length; i++) {
+    const prev = paneStates[i] || { indicators: {} };
+    paneStates[i] = {
+      source: preset.syms[i].source,
+      symbol: preset.syms[i].symbol,
+      tf: preset.tf,
+      indicators: prev.indicators || {},
+    };
+  }
+  localStorage.setItem(LS_PERSONALITY, name);
+  setLayoutId(preset.layoutId);
+  refreshPersonalityButtons();
+}
+
+function refreshPersonalityButtons() {
+  const cur = currentPersonality();
+  document.querySelectorAll(".pers-btn").forEach((btn) => {
+    btn.classList.toggle("on", btn.dataset.pers === cur);
+  });
+}
+
+function bindPersonality() {
+  document.querySelectorAll(".pers-btn").forEach((btn) => {
+    btn.addEventListener("click", () => applyPersonality(btn.dataset.pers));
+  });
+  refreshPersonalityButtons();
+}
 
 window.addEventListener("resize", () => {
   for (const p of panes) p.resize();
@@ -1160,12 +1340,36 @@ function renderIndicatorsModal() {
 
 (async function main() {
   await loadSymbols();
-  const { count, states } = loadState();
+  const { states } = loadState();
   paneStates = states;
-  currentCount = count;
-  setActiveLayoutBtn(count);
-  applyLayout(count);
-  buildPanes(count);
+  currentLayoutId = migrateLayoutState();
+  applyLayout(currentLayoutId);
+  buildPanes(currentLayoutId);
+  refreshLayoutTrigger();
+  refreshLayoutPopover();
+  bindLayoutPopover();
+  bindPersonality();
+
+  // First run? Apply default personality (Quant) to seed states.
+  if (!localStorage.getItem(LS_PERSONALITY)) {
+    applyPersonality("Quant");
+  }
+
+  loadNarratives();
+  loadNews();
+  setInterval(loadNews, 5 * 60 * 1000);
+  loadEvents();
+  setInterval(loadEvents, 60 * 1000);
+  loadFactors();
+  setInterval(loadFactors, 5 * 60 * 1000);
+  loadSignals();
+  setInterval(loadSignals, 60 * 1000);
+  refreshAIInsight();
+  setInterval(refreshAIInsight, 60 * 1000);
+  loadBreadth();
+  refreshDockTilt();
+  setInterval(loadBreadth, 60 * 1000);
+  setInterval(refreshDockTilt, 5 * 60 * 1000);
 
   document.addEventListener("stv:drawing-prefs-changed", () => {
     const prefs = Drawings.PrefsStore.get();
@@ -1174,3 +1378,666 @@ function renderIndicatorsModal() {
     }
   });
 })();
+
+// --- Topbar — clock, ⌘K placeholder, theme toggle ----------------------------
+
+function startClock() {
+  const el = document.getElementById("clock-time");
+  if (!el) return;
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const tick = () => {
+    el.textContent = `${fmt.format(new Date())} ET`;
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+function showToast(msg) {
+  let t = document.getElementById("stv-toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "stv-toast";
+    t.style.cssText =
+      "position:fixed;bottom:60px;left:50%;transform:translateX(-50%);" +
+      "padding:8px 14px;background:var(--surface-3);border:1px solid var(--line);" +
+      "border-radius:var(--r-md);color:var(--ink);font-size:12px;z-index:200;" +
+      "box-shadow:var(--shadow-lift);opacity:0;transition:opacity .15s;";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  clearTimeout(t._stvHide);
+  t._stvHide = setTimeout(() => { t.style.opacity = "0"; }, 1800);
+}
+
+// --- Command palette (⌘K) --------------------------------------------------
+
+const CMD_PALETTE = {
+  results: [],
+  active: 0,
+  queryToken: 0,
+  debounceTimer: null,
+};
+
+function openCmdPalette() {
+  const pal = document.getElementById("cmd-palette");
+  const input = document.getElementById("cmd-palette-input");
+  if (!pal || !input) return;
+  pal.hidden = false;
+  input.value = "";
+  cmdPaletteSearch("");
+  requestAnimationFrame(() => input.focus());
+}
+
+function closeCmdPalette() {
+  const pal = document.getElementById("cmd-palette");
+  if (pal) pal.hidden = true;
+}
+
+async function cmdPaletteSearch(q) {
+  const list = document.getElementById("cmd-palette-list");
+  if (!list) return;
+  const token = ++CMD_PALETTE.queryToken;
+  try {
+    const url = q.trim()
+      ? `/symbols?q=${encodeURIComponent(q.trim())}`
+      : `/symbols`;
+    const data = await fetchJSON(url);
+    if (token !== CMD_PALETTE.queryToken) return;  // stale response
+    const syms = (data.symbols || []).slice(0, 50);
+    CMD_PALETTE.results = syms;
+    CMD_PALETTE.active = 0;
+    renderCmdPaletteResults();
+  } catch {
+    list.innerHTML = '<div class="cmd-palette-empty">Search failed.</div>';
+  }
+}
+
+function renderCmdPaletteResults() {
+  const list = document.getElementById("cmd-palette-list");
+  if (!list) return;
+  list.innerHTML = "";
+  if (CMD_PALETTE.results.length === 0) {
+    list.innerHTML = '<div class="cmd-palette-empty">No results.</div>';
+    return;
+  }
+  CMD_PALETTE.results.forEach((s, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cmd-palette-row" + (i === CMD_PALETTE.active ? " active" : "");
+    btn.dataset.idx = String(i);
+
+    const sym = document.createElement("span");
+    sym.className = "cmd-palette-sym";
+    sym.textContent = s.symbol;
+
+    const lbl = document.createElement("span");
+    lbl.className = "cmd-palette-label";
+    lbl.textContent = s.label || "";
+
+    const src = document.createElement("span");
+    src.className = "cmd-palette-source";
+    src.textContent = s.source || s.asset_class || "";
+
+    btn.appendChild(sym);
+    btn.appendChild(lbl);
+    btn.appendChild(src);
+    btn.addEventListener("click", () => pickCmdPaletteResult(i));
+    list.appendChild(btn);
+  });
+}
+
+function pickCmdPaletteResult(idx) {
+  const s = CMD_PALETTE.results[idx];
+  if (!s) return;
+  // Seed the registry so resolveSource() picks the correct source — without
+  // this, a bare ticker like "NVDA" would fall through to Hyperliquid via the
+  // heuristic in resolveSource, and the chart would fail to load.
+  _registerSymbols([s]);
+  if (panes[0] && panes[0].symbolInput) {
+    panes[0].symbolInput.value = s.symbol;
+    panes[0].symbolInput.dispatchEvent(new Event("change"));
+  }
+  closeCmdPalette();
+}
+
+function moveCmdPaletteActive(delta) {
+  const n = CMD_PALETTE.results.length;
+  if (n === 0) return;
+  CMD_PALETTE.active = (CMD_PALETTE.active + delta + n) % n;
+  // Re-render to update .active outline + scroll into view
+  const list = document.getElementById("cmd-palette-list");
+  if (!list) return;
+  Array.from(list.children).forEach((el, i) => {
+    el.classList.toggle("active", i === CMD_PALETTE.active);
+    if (i === CMD_PALETTE.active && el.scrollIntoView) {
+      el.scrollIntoView({ block: "nearest" });
+    }
+  });
+}
+
+function bindCommandK() {
+  const btn = document.getElementById("cmd-k");
+  if (btn) btn.addEventListener("click", openCmdPalette);
+
+  // Backdrop close
+  document.querySelectorAll("[data-cmd-close]").forEach((el) => {
+    el.addEventListener("click", closeCmdPalette);
+  });
+
+  // Input handlers
+  const input = document.getElementById("cmd-palette-input");
+  if (input) {
+    input.addEventListener("input", () => {
+      clearTimeout(CMD_PALETTE.debounceTimer);
+      const q = input.value;
+      CMD_PALETTE.debounceTimer = setTimeout(() => cmdPaletteSearch(q), 200);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        pickCmdPaletteResult(CMD_PALETTE.active);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveCmdPaletteActive(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveCmdPaletteActive(-1);
+      }
+    });
+  }
+
+  // Global keybinds: ⌘K opens, Esc closes
+  document.addEventListener("keydown", (e) => {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
+      // Allow Esc to close palette even from inside its own input
+      if (e.key === "Escape" && e.target.id === "cmd-palette-input") {
+        e.preventDefault();
+        closeCmdPalette();
+      }
+      return;
+    }
+    const metaK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k";
+    if (metaK) {
+      e.preventDefault();
+      openCmdPalette();
+    } else if (e.key === "Escape") {
+      const pal = document.getElementById("cmd-palette");
+      if (pal && !pal.hidden) closeCmdPalette();
+    }
+  });
+}
+
+function bindThemeToggle() {
+  const btn = document.getElementById("theme-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme") || "dark";
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("stv.theme", next);
+  });
+}
+
+startClock();
+bindCommandK();
+bindThemeToggle();
+
+// --- Narratives card --------------------------------------------------------
+const RAIL_STATE = {
+  narratives: [],
+  activeNarrative: null,
+  histCache: new Map(), // key: `${source}|${symbol}|1D` → { ts, candles }
+};
+
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url} → ${r.status}`);
+  return r.json();
+}
+
+async function loadNarratives() {
+  try {
+    const data = await fetchJSON("/narratives");
+    RAIL_STATE.narratives = data.narratives || [];
+    if (RAIL_STATE.narratives.length > 0 && !RAIL_STATE.activeNarrative) {
+      RAIL_STATE.activeNarrative = RAIL_STATE.narratives[0].id;
+    }
+    renderNarrativesChips();
+    renderNarrativesList();
+  } catch (e) {
+    console.warn("narratives load failed", e);
+  }
+}
+
+function renderNarrativesChips() {
+  const wrap = document.getElementById("narratives-chips");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  for (const n of RAIL_STATE.narratives) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip" + (n.id === RAIL_STATE.activeNarrative ? " on" : "");
+    b.textContent = n.title;
+    b.addEventListener("click", () => {
+      RAIL_STATE.activeNarrative = n.id;
+      renderNarrativesChips();
+      renderNarrativesList();
+    });
+    wrap.appendChild(b);
+  }
+}
+
+async function getHistoryCached(source, symbol, tf = "1D") {
+  const key = `${source}|${symbol}|${tf}`;
+  const hit = RAIL_STATE.histCache.get(key);
+  if (hit && Date.now() - hit.ts < 5 * 60 * 1000) return hit.candles;
+  try {
+    const candles = await fetchJSON(`/history?source=${encodeURIComponent(source)}&symbol=${encodeURIComponent(symbol)}&tf=${tf}&limit=60`);
+    RAIL_STATE.histCache.set(key, { ts: Date.now(), candles });
+    return candles;
+  } catch {
+    return [];
+  }
+}
+
+function sparkSVG(series, up, w = 80, h = 22) {
+  if (!series || series.length < 2) return "";
+  const lo = Math.min(...series), hi = Math.max(...series);
+  const rng = (hi - lo) || 1;
+  const pts = series.map((v, i) => [
+    (i / (series.length - 1)) * w,
+    h - 2 - ((v - lo) / rng) * (h - 4),
+  ]);
+  const d = pts.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const col = up ? "var(--up)" : "var(--down)";
+  return `<svg width="${w}" height="${h}"><path d="${d}" fill="none" stroke="${col}" stroke-width="1.2" stroke-linejoin="round"/><path d="${d} L${w} ${h} L0 ${h} Z" fill="${col}" opacity="0.12"/></svg>`;
+}
+
+async function renderNarrativesList() {
+  const wrap = document.getElementById("narratives-list");
+  if (!wrap) return;
+  const narr = RAIL_STATE.narratives.find((n) => n.id === RAIL_STATE.activeNarrative);
+  if (!narr) { wrap.innerHTML = '<div class="card-empty">No narratives.</div>'; return; }
+  wrap.innerHTML = '<div class="card-empty">Loading…</div>';
+  const rows = await Promise.all(narr.symbols.map(async (s) => {
+    const candles = await getHistoryCached(s.source, s.symbol, "1D");
+    if (candles.length < 2) return { sym: s.symbol, source: s.source, last: null, chg: 0, closes: [] };
+    const closes = candles.map((c) => c.c);
+    const last = closes[closes.length - 1];
+    const prev = closes[closes.length - 2];
+    const chg = prev ? ((last - prev) / prev) * 100 : 0;
+    return { sym: s.symbol, source: s.source, last, chg, closes };
+  }));
+  wrap.innerHTML = "";
+  for (const row of rows) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "narrative-row";
+    const chgCls = row.chg >= 0 ? "up" : "down";
+    btn.innerHTML = `
+      <span class="narrative-sym">${row.sym}</span>
+      <span class="narrative-spark">${sparkSVG(row.closes.slice(-40), row.chg >= 0)}</span>
+      <span class="narrative-price">${row.last != null ? row.last.toFixed(2) : "—"}</span>
+      <span class="narrative-chg ${chgCls}">${row.chg >= 0 ? "+" : ""}${row.chg.toFixed(2)}%</span>
+    `;
+    btn.addEventListener("click", () => {
+      // Jump pane 0 to this symbol using the public symbol-input flow
+      if (panes[0] && panes[0].symbolInput) {
+        panes[0].symbolInput.value = row.sym;
+        panes[0].symbolInput.dispatchEvent(new Event("change"));
+      }
+    });
+    wrap.appendChild(btn);
+  }
+}
+
+// --- News tape --------------------------------------------------------------
+async function loadNews() {
+  const wrap = document.getElementById("news-list");
+  if (!wrap) return;
+  try {
+    const data = await fetchJSON("/news");
+    const items = data.news || [];
+    if (items.length === 0) {
+      wrap.innerHTML = '<div class="card-empty">No news.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    for (const it of items) {
+      const a = document.createElement("a");
+      a.className = "news-row";
+      a.href = it.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      const timeEl = document.createElement("span");
+      timeEl.className = "news-time";
+      timeEl.textContent = it.time;
+      const wrap = document.createElement("div");
+      const srcEl = document.createElement("span");
+      srcEl.className = "news-source";
+      srcEl.textContent = it.source;
+      const txtEl = document.createElement("span");
+      txtEl.className = "news-text";
+      txtEl.textContent = it.text;
+      wrap.appendChild(srcEl);
+      wrap.appendChild(document.createTextNode(" "));
+      wrap.appendChild(txtEl);
+      a.appendChild(timeEl);
+      a.appendChild(wrap);
+      wrap.appendChild(a);
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div class="card-empty">News unavailable.</div>';
+  }
+}
+
+// --- Events ----------------------------------------------------------------
+function paneSymbolsList() {
+  return panes.map((p) => p && p.state && p.state.symbol).filter(Boolean);
+}
+
+async function loadEvents() {
+  const wrap = document.getElementById("events-list");
+  if (!wrap) return;
+  try {
+    const syms = paneSymbolsList().join(",");
+    const data = await fetchJSON(`/events?symbols=${encodeURIComponent(syms)}`);
+    const items = data.events || [];
+    if (items.length === 0) {
+      wrap.innerHTML = '<div class="card-empty">No upcoming events.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    for (const e of items) {
+      const row = document.createElement("div");
+      row.className = "event-row";
+      const whenEl = document.createElement("span");
+      whenEl.className = "event-when";
+      whenEl.textContent = e.when;
+      const dotEl = document.createElement("span");
+      const toneClass = e.tone === "acid" ? "acid" : e.tone === "warn" ? "warn" : "";
+      dotEl.className = "event-dot" + (toneClass ? " " + toneClass : "");
+      const labelEl = document.createElement("span");
+      labelEl.className = "event-label";
+      labelEl.textContent = e.label;
+      row.appendChild(whenEl);
+      row.appendChild(dotEl);
+      row.appendChild(labelEl);
+      wrap.appendChild(row);
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div class="card-empty">Events unavailable.</div>';
+  }
+}
+
+// --- Factor pulse ----------------------------------------------------------
+async function loadFactors() {
+  const wrap = document.getElementById("factor-list");
+  if (!wrap) return;
+  try {
+    const data = await fetchJSON("/factors");
+    const items = data.factors || [];
+    if (items.length === 0) {
+      wrap.innerHTML = '<div class="card-empty">No factor data.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    for (const f of items) {
+      const row = document.createElement("div");
+      row.className = "factor-row";
+      const sign = f.z >= 0 ? "+" : "";
+      const color = f.z >= 0 ? "var(--up)" : "var(--down)";
+      const fillLeft = f.z >= 0 ? "50%" : `${50 + f.z * 25}%`;
+      const fillWidth = `${Math.abs(f.z) * 25}%`;
+      row.innerHTML = `
+        <span class="factor-name">${f.name}</span>
+        <div class="factor-bar">
+          <div class="factor-bar-zero"></div>
+          <div class="factor-bar-fill" style="left:${fillLeft};width:${fillWidth};background:${color};"></div>
+        </div>
+        <span class="factor-z" style="color:${color}">${sign}${f.z.toFixed(2)}σ</span>
+      `;
+      wrap.appendChild(row);
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div class="card-empty">Factors unavailable.</div>';
+  }
+}
+
+// --- Live signals -----------------------------------------------------------
+async function loadSignals() {
+  const wrap = document.getElementById("signals-list");
+  const countEl = document.getElementById("signals-count");
+  if (!wrap) return;
+  try {
+    const data = await fetchJSON("/signals");
+    const items = data.signals || [];
+    if (countEl) countEl.textContent = `${items.length} active`;
+    if (items.length === 0) {
+      wrap.innerHTML = '<div class="card-empty">No active signals.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    for (const s of items) {
+      const row = document.createElement("div");
+      row.className = "signal-row";
+      const sig = s.sigma >= 0 ? `+${s.sigma.toFixed(1)}σ` : `${s.sigma.toFixed(1)}σ`;
+      const sigColor = s.sigma >= 0 ? "var(--up)" : "var(--down)";
+      const sideEl = document.createElement("span");
+      const sideClass = s.side === "long" ? "long" : "short";
+      sideEl.className = "signal-side " + sideClass;
+      sideEl.textContent = s.side.toUpperCase();
+      const bodyEl = document.createElement("div");
+      bodyEl.className = "signal-body";
+      const symEl = document.createElement("div");
+      symEl.className = "signal-sym";
+      symEl.textContent = s.symbol;
+      const msgEl = document.createElement("div");
+      msgEl.className = "signal-msg";
+      msgEl.textContent = s.message;
+      bodyEl.appendChild(symEl);
+      bodyEl.appendChild(msgEl);
+      const sigmaEl = document.createElement("span");
+      sigmaEl.className = "signal-sigma";
+      sigmaEl.style.color = sigColor;
+      sigmaEl.textContent = sig;
+      row.appendChild(sideEl);
+      row.appendChild(bodyEl);
+      row.appendChild(sigmaEl);
+      wrap.appendChild(row);
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div class="card-empty">Signals unavailable.</div>';
+  }
+}
+
+// --- AI Insight (deterministic, no LLM) ------------------------------------
+function _smaLast(closes, n) {
+  if (closes.length < n) return null;
+  let s = 0;
+  for (let i = closes.length - n; i < closes.length; i++) s += closes[i];
+  return s / n;
+}
+
+function _stdev(arr) {
+  if (arr.length < 2) return 0;
+  const m = arr.reduce((a, b) => a + b, 0) / arr.length;
+  const v = arr.reduce((a, b) => a + (b - m) ** 2, 0) / (arr.length - 1);
+  return Math.sqrt(v);
+}
+
+function _logReturns(closes, n) {
+  const out = [];
+  for (let i = closes.length - n; i < closes.length; i++) {
+    if (i <= 0 || closes[i - 1] === 0) continue;
+    out.push(Math.log(closes[i] / closes[i - 1]));
+  }
+  return out;
+}
+
+function _rsiLast(closes, period = 14) {
+  if (closes.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const d = closes[i] - closes[i - 1];
+    if (d >= 0) gains += d; else losses -= d;
+  }
+  const avgG = gains / period;
+  const avgL = losses / period;
+  if (avgL === 0 && avgG === 0) return null;
+  if (avgL === 0) return 100;
+  const rs = avgG / avgL;
+  return 100 - 100 / (1 + rs);
+}
+
+function _hiddenBullDiv(closes, rsis) {
+  if (closes.length < 20 || rsis.length < 20) return false;
+  const idxByPriceAsc = [...Array(20).keys()].sort((a, b) => closes[closes.length - 20 + a] - closes[closes.length - 20 + b]);
+  const lows = idxByPriceAsc.slice(0, 2).sort((a, b) => a - b);
+  if (lows.length !== 2) return false;
+  const pLows = lows.map((i) => closes[closes.length - 20 + i]);
+  const rLows = lows.map((i) => rsis[rsis.length - 20 + i]);
+  if (rLows.some((r) => r == null)) return false;
+  return pLows[1] > pLows[0] && rLows[1] < rLows[0];
+}
+
+function _renderInsight(symbol, candles) {
+  const symEl = document.getElementById("ai-symbol");
+  const askSymEl = document.getElementById("ai-ask-symbol");
+  const bodyEl = document.getElementById("ai-body");
+  const metricsEl = document.getElementById("ai-metrics");
+  if (symEl) symEl.textContent = symbol;
+  if (askSymEl) askSymEl.textContent = symbol;
+  if (!candles || candles.length < 30) {
+    if (bodyEl) bodyEl.textContent = "Not enough data yet.";
+    if (metricsEl) metricsEl.innerHTML = "";
+    return;
+  }
+  const closes = candles.map((c) => c.c);
+  const last = closes[closes.length - 1];
+  const sma200 = _smaLast(closes, Math.min(200, closes.length));
+  const bullish = sma200 != null && last > sma200;
+
+  const rets5 = _logReturns(closes, 5);
+  const rets60 = _logReturns(closes, 60);
+  const vol5 = _stdev(rets5);
+  const vol60 = _stdev(rets60);
+  const volCluster = vol5 > vol60 * 1.5;
+
+  const rsi14 = (() => {
+    const out = [];
+    for (let i = 14; i < closes.length; i++) {
+      out.push(_rsiLast(closes.slice(0, i + 1)));
+    }
+    return out;
+  })();
+  const hiddenBull = _hiddenBullDiv(closes, rsi14);
+
+  const demandReclaim = last * 0.985;
+  const high20 = Math.max(...closes.slice(-20));
+  const impliedSigma = (vol60 || 0) * 100;
+
+  // Similar setups — count past bars where (rsi bucket, ma-spread sign) matches
+  let similar = 0, wins = 0;
+  if (sma200 != null) {
+    const curBucket = Math.floor((rsi14[rsi14.length - 1] || 50) / 10);
+    const curMaSign = last > sma200 ? 1 : -1;
+    for (let i = 14; i < closes.length - 5; i++) {
+      const rs = rsi14[i - 14];
+      const ma = _smaLast(closes.slice(0, i + 1), Math.min(200, i + 1));
+      if (rs == null || ma == null) continue;
+      const b = Math.floor(rs / 10);
+      const s = closes[i] > ma ? 1 : -1;
+      if (b === curBucket && s === curMaSign) {
+        similar++;
+        if (closes[i + 5] > closes[i]) wins++;
+      }
+    }
+  }
+  const winRate = similar > 0 ? Math.round((wins / similar) * 100) : 0;
+
+  // OBV trend last 20 days
+  let obv = 0;
+  const obvSeries = [];
+  for (let i = 1; i < closes.length; i++) {
+    if (closes[i] > closes[i - 1]) obv += 1;
+    else if (closes[i] < closes[i - 1]) obv -= 1;
+    obvSeries.push(obv);
+  }
+  const obv20 = obvSeries.slice(-20);
+  const obvUp = obv20.length >= 2 && obv20[obv20.length - 1] > obv20[0];
+
+  if (bodyEl) {
+    bodyEl.innerHTML = `
+      Regime: <span class="ai-strong">${bullish ? "bullish" : "bearish"}${volCluster ? " · vol-cluster active" : ""}</span>.
+      ${hiddenBull ? 'Hidden divergence on 4H RSI vs. price · ' : ''}watch
+      <span class="mono ai-strong">${demandReclaim.toFixed(2)}</span> as first demand reclaim.
+    `;
+  }
+  if (metricsEl) {
+    const rows = [
+      { k: "Similar setups", v: similar > 0 ? `${similar} historical · ${winRate}% win` : "n/a" },
+      { k: "Liquidity above", v: high20.toFixed(2) },
+      { k: "Implied σ (1D)", v: `±${impliedSigma.toFixed(2)}%` },
+      { k: "Institutional flow", v: obvUp ? "Accumulating" : "Distributing", tone: obvUp ? "up" : "down" },
+    ];
+    metricsEl.innerHTML = rows.map((r) => `
+      <div class="ai-metric">
+        <span class="ai-metric-k">${r.k}</span>
+        <span class="ai-metric-v" ${r.tone ? `style="color:var(--${r.tone})"` : ""}>${r.v}</span>
+      </div>
+    `).join("");
+  }
+}
+
+async function refreshAIInsight() {
+  if (!panes[0] || !panes[0].state) return;
+  const { source, symbol } = panes[0].state;
+  const candles = await getHistoryCached(source, symbol, "1D");
+  _renderInsight(symbol, candles);
+}
+
+document.getElementById("ai-ask")?.addEventListener("click", () => showToast("Copilot coming soon"));
+
+document.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+    e.preventDefault();
+    showToast("Copilot coming soon");
+  }
+});
+
+// --- Bottom dock ------------------------------------------------------------
+async function loadBreadth() {
+  try {
+    const data = await fetchJSON("/quote/breadth");
+    const adv = document.getElementById("dock-adv");
+    const dec = document.getElementById("dock-dec");
+    const vix = document.getElementById("dock-vix");
+    const tnx = document.getElementById("dock-tnx");
+    if (adv) adv.textContent = data.adv ?? "—";
+    if (dec) dec.textContent = data.dec ?? "—";
+    if (vix) vix.textContent = data.vix != null ? data.vix.toFixed(2) : "—";
+    if (tnx) tnx.textContent = data.us10y != null ? data.us10y.toFixed(3) + "%" : "—%";
+  } catch {}
+}
+
+async function refreshDockTilt() {
+  try {
+    const data = await fetchJSON("/factors");
+    const factors = data.factors || [];
+    if (factors.length === 0) return;
+    const top = factors.slice().sort((a, b) => Math.abs(b.z) - Math.abs(a.z))[0];
+    const el = document.getElementById("dock-tilt");
+    if (el && top) {
+      const sign = top.z >= 0 ? "+" : "";
+      el.textContent = `${top.name.toLowerCase()} ${sign}${top.z.toFixed(2)}σ`;
+    }
+  } catch {}
+}

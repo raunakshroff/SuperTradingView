@@ -88,6 +88,47 @@ Each pane has a left-edge toolbar (toggle to floating palette in settings) with 
 
 ---
 
+## Workspace shell (Phase 1 redesign)
+
+The single-page UI is organized around a three-column workspace: a left rail of
+*narratives / factor pulse / upcoming events*, a center grid of 1-8 configurable
+charts, and a right rail of *AI insight / live signals / news tape*. A 36-pixel
+bottom dock shows real advancers/decliners across the curated 100-symbol
+universe plus live VIX and US10Y, with a `DEMO`-tagged P/L placeholder until a
+real portfolio backend lands.
+
+- **Tokens:** obsidian + electric-lime acid accent in dark mode; warm-paper + olive
+  acid in light mode. Toggle via the sun icon in the top bar; persisted to
+  `localStorage["stv.theme"]`.
+- **Layout selector:** top-right popover with 7 presets (`1 up`, `2 H`, `2 V`,
+  `1+2`, `2×2`, `3×2`, `4×2`). Switch via mouse or `⌘/Ctrl + 1-7`.
+- **Personality presets:** Minimalist / Quant / Scalper / Investor segmented
+  control. Switching applies a preset's layout id + symbol set + default
+  timeframe; per-pane indicators are preserved by slot index across switches.
+- **Narratives:** curated themes (`AI boom`, `Energy cycle`, `War risk`, `Rate
+  cuts`, `Reflation`, `Mag 7`) live in `narratives.json` at the repo root.
+  Update by editing the file.
+- **Factor pulse:** server-side cross-sectional z-scores over a 100-symbol
+  universe in `factor_universe.json`. First load takes 30-60s (yfinance
+  cold-start over 100 symbols); cached 30 minutes with stale-while-revalidate
+  thereafter.
+- **AI insight:** *deterministic* — derived from the active pane's history
+  (regime via 200-SMA, vol-cluster detection, hidden RSI divergence,
+  OBV-trended flow proxy). The `Ask copilot` button and `⌘K` shortcut are
+  placeholders for a future LLM-backed palette; they show a "coming soon"
+  toast today.
+- **Events:** `events.json` is a hand-curated calendar of macro events for the
+  next 7 days; per-symbol earnings dates come from yfinance and are cached
+  one hour per ticker.
+- **News tape:** RSS aggregation over Yahoo Finance, Reuters Business, and
+  MarketWatch via `feedparser`. Cached 5 minutes.
+
+The Lightweight Charts v5 chart engine, the indicator framework
+(`static/indicators.js`), and the drawing layer (`static/drawings.js`) are
+unchanged in this phase — only the surrounding chrome was reworked.
+
+---
+
 ## Quick start
 
 ```bash
