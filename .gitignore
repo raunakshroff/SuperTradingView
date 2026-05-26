@@ -26,3 +26,7 @@ build/
 # Logs and screenshots
 *.log
 chart_screenshot.png
+
+# Dev utility scripts
+take_screenshots.py
+static/lwc.js
