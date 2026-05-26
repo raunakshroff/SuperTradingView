@@ -11,6 +11,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
   <script src="https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <script>
+    // Theme bootstrap must run synchronously (before DOMContentLoaded) to
+    // avoid a flash of the wrong theme. ES modules are deferred, so this
+    // cannot live in main.js.
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("stv.theme") || "dark"
+    );
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -276,9 +284,7 @@
     </div>
   </div>
 
-  <script src="/static/indicators.js"></script>
-  <script src="/static/drawings.js"></script>
-  <script src="/static/app.js"></script>
+  <script type="module" src="/static/main.js"></script>
 
   <div id="draw-settings-pop" class="draw-settings-pop" hidden>
     <div class="dsp-header">Drawing settings</div>
