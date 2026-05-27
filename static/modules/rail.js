@@ -3,9 +3,15 @@
 import { panes } from "./grid.js";
 
 export async function fetchJSON(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`${url} → ${r.status}`);
-  return r.json();
+  const ctrl  = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10_000);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`${url} → ${r.status}`);
+    return r.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const RAIL_STATE = {
@@ -23,9 +29,7 @@ export async function loadNarratives() {
     }
     renderNarrativesChips();
     renderNarrativesList();
-  } catch (e) {
-    console.warn("narratives load failed", e);
-  }
+  } catch { /* silently retry on next interval */ }
 }
 
 function renderNarrativesChips() {

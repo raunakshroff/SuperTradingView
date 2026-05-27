@@ -1,10 +1,11 @@
-// Single chart pane: chart init, subscriptions, indicators, legends, drawings.
+// Single chart pane: chart init, subscriptions, legends, drawings.
 
-import { DEFS }                                from "../indicators.js";
-import { DrawingLayer, PrefsStore, SettingsPopover } from "../drawings.js";
-import { HL }                                  from "./hyperliquid-ws.js";
+import { DEFS }                                          from "../indicators.js";
+import { DrawingLayer, PrefsStore, SettingsPopover }     from "../drawings.js";
+import { HL }                                            from "./hyperliquid-ws.js";
 import { SYMBOLS, querySymbolsDebounced, resolveSource } from "./symbols.js";
-import { defIdOf }                             from "./constants.js";
+import { defIdOf }                                       from "./constants.js";
+import { IndicatorManager }                              from "./indicator-manager.js";
 
 export class Pane {
   // opts: { onStateChange, onOpenModal }
@@ -19,7 +20,6 @@ export class Pane {
     this.sse         = null;
     this.flashTimer  = null;
     this.candles     = [];
-    this.indicatorViews = {};
     this.legendNodes = [];
 
     const tpl = document.getElementById("pane-template");
@@ -40,18 +40,17 @@ export class Pane {
     this._buildTfPills();
     this._buildChart();
 
-    // Rebuild persisted indicators: overlays first, then sub-panes in order.
-    for (const def of DEFS) {
-      if (!def.overlay) continue;
-      for (const key of Object.keys(this.state.indicators).filter((k) => defIdOf(k) === def.id).sort()) {
-        this._buildIndicator(key);
-      }
-    }
-    let paneIdx = 1;
-    for (const key of this._activeSubPanes()) {
-      this._buildIndicator(key, paneIdx);
-      paneIdx++;
-    }
+    this.im = new IndicatorManager({
+      chart:         this.chart,
+      getState:      () => this.state,
+      onStateChange: () => this._onStateChange(),
+      getCandles:    () => this.candles,
+      fxBtn:         this.fxBtn,
+      onOpenModal:   this._openModal,
+      onAfterChange: () => this._refreshLegends(),
+    });
+
+    this.im.buildAll();
 
     this.drawingLayer = new DrawingLayer({
       chart:     this.chart,
@@ -105,9 +104,9 @@ export class Pane {
       });
     }
 
-    this._applyPaneSizing();
+    this.im.applyPaneSizing();
     this._refreshLegends();
-    this._updateFxButton();
+    this.im._updateFxButton();
 
     this.symbolInput.addEventListener("change", () => this._onSymbolChange());
     this.symbolInput.addEventListener("blur",   () => this._onSymbolChange());
@@ -150,6 +149,14 @@ export class Pane {
     this._onStateChange();
   }
 
+  // --- Indicator delegation (public API used by indicators-modal.js) ----------
+
+  setIndicator(key, params)   { this.im.setIndicator(key, params); }
+  addIndicatorInstance(defId) { return this.im.addIndicatorInstance(defId); }
+  removeIndicator(key)        { this.im.removeIndicator(key); }
+
+  // --- Status badge ----------------------------------------------------------
+
   _setStatus(text) {
     if (text) {
       this.statusBadge.textContent = text;
@@ -158,6 +165,8 @@ export class Pane {
       this.statusBadge.hidden = true;
     }
   }
+
+  // --- Symbol / timeframe ---------------------------------------------------
 
   _onSymbolChange() {
     const text = this.symbolInput.value.trim();
@@ -186,6 +195,8 @@ export class Pane {
     });
   }
 
+  // --- Data subscriptions ---------------------------------------------------
+
   async subscribe() {
     this.unsubscribe();
     this.lastPrice = null;
@@ -193,16 +204,13 @@ export class Pane {
     this.tickerChange.textContent = "";
     this.tickerDot.classList.remove("up", "down");
     this.series.setData([]);
-    for (const id of Object.keys(this.indicatorViews)) {
-      for (const s of this.indicatorViews[id].series) s.setData([]);
-    }
+    this.im.clearSeriesData();
     this._setStatus("loading…");
 
     try {
       await this._loadHistory();
-    } catch (e) {
+    } catch {
       this._setStatus("history failed");
-      console.warn("history error:", e);
     }
 
     if (this.state.source === "hyperliquid") {
@@ -235,7 +243,7 @@ export class Pane {
     this.series.setData(this.candles.map((c) => ({
       time: c.time, open: c.open, high: c.high, low: c.low, close: c.close,
     })));
-    this._recomputeAllIndicators();
+    this.im.recomputeAll();
     const last = this.candles[this.candles.length - 1];
     this._updateTicker(last.close, false);
   }
@@ -272,7 +280,7 @@ export class Pane {
     }
     const tail = this.candles[this.candles.length - 1];
     this.series.update({ time: tail.time, open: tail.open, high: tail.high, low: tail.low, close: tail.close });
-    this._updateIndicatorTails();
+    this.im.updateTails();
   }
 
   _applyCandle(c) {
@@ -285,101 +293,8 @@ export class Pane {
     this.series.update({
       time: incoming.time, open: incoming.open, high: incoming.high, low: incoming.low, close: incoming.close,
     });
-    this._updateIndicatorTails();
+    this.im.updateTails();
     this._updateTicker(c.close, true);
-  }
-
-  // --- Indicators -----------------------------------------------------------
-
-  setIndicator(key, params) {
-    const def = DEFS.find((d) => d.id === defIdOf(key));
-    if (!def) return;
-    const wasNew = !this.state.indicators[key];
-    this.state.indicators[key] = { ...params };
-    this._onStateChange();
-
-    if (def.overlay) {
-      this._buildIndicator(key);
-    } else if (wasNew) {
-      this._rebuildSubPanes();
-    } else {
-      this._buildIndicator(key);
-    }
-    this._applyPaneSizing();
-    this._refreshLegends();
-    this._updateFxButton();
-  }
-
-  addIndicatorInstance(defId) {
-    const def = DEFS.find((d) => d.id === defId);
-    if (!def) return null;
-    const existing = Object.keys(this.state.indicators).filter((k) => defIdOf(k) === defId);
-    const key = existing.length === 0 ? defId : `${defId}~${Date.now()}`;
-    const params = {};
-    for (const p of def.params) params[p.key] = p.default;
-    this.setIndicator(key, params);
-    return key;
-  }
-
-  removeIndicator(key) {
-    const def = DEFS.find((d) => d.id === defIdOf(key));
-    delete this.state.indicators[key];
-    this._onStateChange();
-    this._tearDownIndicator(key);
-    if (def && !def.overlay) this._rebuildSubPanes();
-    this._applyPaneSizing();
-    this._refreshLegends();
-    this._updateFxButton();
-  }
-
-  _updateFxButton() {
-    const count = Object.keys(this.state.indicators).length;
-    this.fxBtn.classList.toggle("has-active", count > 0);
-    const countEl = this.fxBtn.querySelector(".fx-count");
-    if (countEl) countEl.textContent = count > 0 ? String(count) : "";
-  }
-
-  _activeSubPanes() {
-    const result = [];
-    for (const def of DEFS) {
-      if (def.overlay) continue;
-      const keys = Object.keys(this.state.indicators)
-        .filter((k) => defIdOf(k) === def.id)
-        .sort();
-      result.push(...keys);
-    }
-    return result;
-  }
-
-  _paneIndexFor(key) {
-    const def = DEFS.find((d) => d.id === defIdOf(key));
-    if (!def || def.overlay) return 0;
-    const subs = this._activeSubPanes();
-    const idx = subs.indexOf(key);
-    return idx >= 0 ? idx + 1 : 1;
-  }
-
-  _rebuildSubPanes() {
-    for (const key of Object.keys(this.indicatorViews)) {
-      const def = DEFS.find((d) => d.id === defIdOf(key));
-      if (def && !def.overlay) this._tearDownIndicator(key);
-    }
-    const panes = this.chart.panes();
-    for (let i = panes.length - 1; i >= 1; i--) {
-      try { this.chart.removePane(i); } catch (_e) { /* ignore */ }
-    }
-    let paneIdx = 1;
-    for (const key of this._activeSubPanes()) {
-      this._buildIndicator(key, paneIdx);
-      paneIdx++;
-    }
-  }
-
-  _applyPaneSizing() {
-    const panes = this.chart.panes();
-    if (panes.length === 0) return;
-    panes[0].setStretchFactor(3);
-    for (let i = 1; i < panes.length; i++) panes[i].setStretchFactor(1);
   }
 
   // --- Legends --------------------------------------------------------------
@@ -402,15 +317,14 @@ export class Pane {
 
   _refreshLegendsNow() {
     this._clearLegends();
-    const panes = this.chart.panes();
-    if (panes.length === 0) return;
+    const chartPanes = this.chart.panes();
+    if (chartPanes.length === 0) return;
 
     const attach = (paneIdx, items) => {
-      if (paneIdx >= panes.length || items.length === 0) return;
-      const paneEl = panes[paneIdx].getHTMLElement();
+      if (paneIdx >= chartPanes.length || items.length === 0) return;
+      const paneEl = chartPanes[paneIdx].getHTMLElement();
       if (!paneEl) return;
-      const computed = window.getComputedStyle(paneEl).position;
-      if (computed === "static") paneEl.style.position = "relative";
+      if (window.getComputedStyle(paneEl).position === "static") paneEl.style.position = "relative";
       const legend = document.createElement("div");
       legend.className = "pane-legend";
       for (const { def, key } of items) legend.appendChild(this._makeLegendItem(def, key));
@@ -428,7 +342,7 @@ export class Pane {
     }
     attach(0, overlayItems);
 
-    const subKeys = this._activeSubPanes();
+    const subKeys = this.im.activeSubPanes();
     for (let i = 0; i < subKeys.length; i++) {
       const key = subKeys[i];
       const def = DEFS.find((d) => d.id === defIdOf(key));
@@ -457,9 +371,9 @@ export class Pane {
     const item = document.createElement("div");
     item.className = "legend-item";
 
-    const colors    = this._resolveColors(def, key);
+    const colors     = this.im.resolveColors(def, key);
     const firstColor = Object.values(colors)[0] || "#888";
-    const swatch    = document.createElement("span");
+    const swatch     = document.createElement("span");
     swatch.className = "legend-color";
     swatch.style.background = firstColor;
     item.appendChild(swatch);
@@ -492,58 +406,6 @@ export class Pane {
     item.appendChild(remove);
 
     return item;
-  }
-
-  _tearDownIndicator(id) {
-    const view = this.indicatorViews[id];
-    if (!view) return;
-    for (const s of view.series) this.chart.removeSeries(s);
-    delete this.indicatorViews[id];
-  }
-
-  _resolveColors(def, key) {
-    const stateKey  = key !== undefined ? key : def.id;
-    const overrides = (this.state.indicators[stateKey] || {}).colors || {};
-    const out = {};
-    for (const slot of def.colors || []) {
-      const v = overrides[slot.key];
-      out[slot.key] = typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : slot.default;
-    }
-    return out;
-  }
-
-  _buildIndicator(key, forcedPane) {
-    this._tearDownIndicator(key);
-    const def = DEFS.find((d) => d.id === defIdOf(key));
-    if (!def) return;
-    const paneIndex = forcedPane !== undefined ? forcedPane : this._paneIndexFor(key);
-    const colors    = this._resolveColors(def, key);
-    const series    = def.build(this.chart, paneIndex, colors);
-    this.indicatorViews[key] = { series, def };
-    this._recomputeIndicator(key);
-  }
-
-  _recomputeIndicator(key) {
-    if (this.candles.length === 0) return;
-    const view = this.indicatorViews[key];
-    if (!view) return;
-    const params = this.state.indicators[key] || {};
-    const colors = this._resolveColors(view.def, key);
-    const data   = view.def.compute(this.candles, params, colors);
-    if (data != null) view.def.apply(view.series, data);
-  }
-
-  _recomputeAllIndicators() {
-    for (const id of Object.keys(this.state.indicators)) {
-      if (!this.indicatorViews[id]) this._buildIndicator(id);
-      else this._recomputeIndicator(id);
-    }
-  }
-
-  _updateIndicatorTails() {
-    for (const id of Object.keys(this.indicatorViews)) {
-      this._recomputeIndicator(id);
-    }
   }
 
   // --- Drawings -------------------------------------------------------------
