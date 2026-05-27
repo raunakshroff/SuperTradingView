@@ -6,6 +6,7 @@ import { HL }                                            from "./hyperliquid-ws.
 import { SYMBOLS, querySymbolsDebounced, resolveSource } from "./symbols.js";
 import { defIdOf }                                       from "./constants.js";
 import { IndicatorManager }                              from "./indicator-manager.js";
+import { fetchJSON }                                     from "../utils.js";
 
 export class Pane {
   // opts: { onStateChange, onOpenModal }
@@ -198,6 +199,9 @@ export class Pane {
   // --- Data subscriptions ---------------------------------------------------
 
   async subscribe() {
+    this._subGen = (this._subGen || 0) + 1;
+    const gen = this._subGen;
+
     this.unsubscribe();
     this.lastPrice = null;
     this.tickerPrice.textContent = "—";
@@ -207,11 +211,16 @@ export class Pane {
     this.im.clearSeriesData();
     this._setStatus("loading…");
 
+    let histFailed = false;
     try {
       await this._loadHistory();
     } catch {
-      this._setStatus("history failed");
+      histFailed = true;
     }
+
+    if (gen !== this._subGen) return;  // superseded by a newer subscribe()
+
+    if (histFailed) this._setStatus("history failed");
 
     if (this.state.source === "hyperliquid") {
       this._setStatus(null);
@@ -232,9 +241,7 @@ export class Pane {
     const url = `/history?source=${encodeURIComponent(this.state.source)}`
               + `&symbol=${encodeURIComponent(this.state.symbol)}`
               + `&tf=${encodeURIComponent(this.state.tf)}&limit=500`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`history ${res.status}`);
-    const data = await res.json();
+    const data = await fetchJSON(url);
     if (!Array.isArray(data) || data.length === 0) return;
     this.candles = data.map((c) => ({
       time: c.time, open: c.open, high: c.high, low: c.low, close: c.close,

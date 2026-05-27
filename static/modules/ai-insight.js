@@ -4,13 +4,6 @@ import { getHistoryCached } from "./rail.js";
 import { panes }            from "./grid.js";
 import { showToast }        from "./topbar.js";
 
-function _smaLast(closes, n) {
-  if (closes.length < n) return null;
-  let s = 0;
-  for (let i = closes.length - n; i < closes.length; i++) s += closes[i];
-  return s / n;
-}
-
 function _stdev(arr) {
   if (arr.length < 2) return 0;
   const m = arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -27,10 +20,11 @@ function _logReturns(closes, n) {
   return out;
 }
 
-function _rsiLast(closes, period = 14) {
-  if (closes.length < period + 1) return null;
+// end is inclusive index into closes (default: last element)
+function _rsiLast(closes, period = 14, end = closes.length - 1) {
+  if (end < period) return null;
   let gains = 0, losses = 0;
-  for (let i = closes.length - period; i < closes.length; i++) {
+  for (let i = end - period + 1; i <= end; i++) {
     const d = closes[i] - closes[i - 1];
     if (d >= 0) gains += d; else losses -= d;
   }
@@ -39,6 +33,18 @@ function _rsiLast(closes, period = 14) {
   if (avgL === 0 && avgG === 0) return null;
   if (avgL === 0) return 100;
   return 100 - 100 / (1 + avgG / avgL);
+}
+
+// O(n) rolling SMA — avoids repeated slice+sum inside loops
+function _sma200Series(closes) {
+  const result = new Array(closes.length).fill(null);
+  let sum = 0;
+  for (let i = 0; i < closes.length; i++) {
+    sum += closes[i];
+    if (i >= 200) sum -= closes[i - 200];
+    result[i] = sum / Math.min(i + 1, 200);
+  }
+  return result;
 }
 
 function _hiddenBullDiv(closes, rsis) {
@@ -69,7 +75,8 @@ function _renderInsight(symbol, candles) {
 
   const closes  = candles.map((c) => c.c);
   const last    = closes[closes.length - 1];
-  const sma200  = _smaLast(closes, Math.min(200, closes.length));
+  const smaSer  = _sma200Series(closes);
+  const sma200  = smaSer[closes.length - 1];
   const bullish = sma200 != null && last > sma200;
 
   const rets5   = _logReturns(closes, 5);
@@ -78,13 +85,8 @@ function _renderInsight(symbol, candles) {
   const vol60   = _stdev(rets60);
   const volCluster = vol5 > vol60 * 1.5;
 
-  const rsi14 = (() => {
-    const out = [];
-    for (let i = 14; i < closes.length; i++) {
-      out.push(_rsiLast(closes.slice(0, i + 1)));
-    }
-    return out;
-  })();
+  const rsi14 = [];
+  for (let i = 14; i < closes.length; i++) rsi14.push(_rsiLast(closes, 14, i));
   const hiddenBull = _hiddenBullDiv(closes, rsi14);
 
   const demandReclaim = last * 0.985;
@@ -97,7 +99,7 @@ function _renderInsight(symbol, candles) {
     const curMaSign = last > sma200 ? 1 : -1;
     for (let i = 14; i < closes.length - 5; i++) {
       const rs = rsi14[i - 14];
-      const ma = _smaLast(closes.slice(0, i + 1), Math.min(200, i + 1));
+      const ma = smaSer[i];
       if (rs == null || ma == null) continue;
       const b = Math.floor(rs / 10);
       const s = closes[i] > ma ? 1 : -1;

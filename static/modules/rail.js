@@ -1,18 +1,9 @@
 // Right-rail narratives card: chips, symbol list with sparklines, 5-min cache.
 
-import { panes } from "./grid.js";
+import { panes }     from "./grid.js";
+import { fetchJSON } from "../utils.js";
 
-export async function fetchJSON(url) {
-  const ctrl  = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10_000);
-  try {
-    const r = await fetch(url, { signal: ctrl.signal });
-    if (!r.ok) throw new Error(`${url} → ${r.status}`);
-    return r.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
+export { fetchJSON }; // re-export so existing importers (dock, signals, etc.) keep working
 
 const RAIL_STATE = {
   narratives:      [],
@@ -100,11 +91,12 @@ async function renderNarrativesList() {
     btn.className = "narrative-row";
     const chgCls  = row.chg >= 0 ? "up" : "down";
     btn.innerHTML = `
-      <span class="narrative-sym">${row.sym}</span>
+      <span class="narrative-sym"></span>
       <span class="narrative-spark">${sparkSVG(row.closes.slice(-40), row.chg >= 0)}</span>
       <span class="narrative-price">${row.last != null ? row.last.toFixed(2) : "—"}</span>
       <span class="narrative-chg ${chgCls}">${row.chg >= 0 ? "+" : ""}${row.chg.toFixed(2)}%</span>
     `;
+    btn.querySelector(".narrative-sym").textContent = row.sym;
     btn.addEventListener("click", () => {
       if (panes[0] && panes[0].symbolInput) {
         panes[0].symbolInput.value = row.sym;

@@ -4,6 +4,6 @@
 //   drawing-layer.js   — DrawingLayer, StyleModal, SettingsPopover
 
 export { DrawingStore, PrefsStore, util }           from "./modules/drawing-store.js";
-export { TOOL_DEFS, TOOL_DEFS_BY_ID, DASH_MAP, distPointToSegment }
+export { TOOL_DEFS, TOOL_DEFS_BY_ID, distPointToSegment }
                                                     from "./modules/drawing-tools.js";
 export { DrawingLayer, StyleModal, SettingsPopover } from "./modules/drawing-layer.js";

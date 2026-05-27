@@ -38,7 +38,7 @@ class HyperliquidWS {
   _onClose() {
     this.ws = null;
     this.openPromise = null;
-    const wait = this.backoff;
+    const wait = this.backoff * (1 + Math.random() * 0.3);
     this.backoff = Math.min(this.backoff * 2, 30000);
     setTimeout(() => {
       if (this.subs.size > 0) this._connect();
