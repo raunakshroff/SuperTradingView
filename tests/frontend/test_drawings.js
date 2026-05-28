@@ -139,26 +139,32 @@ for (const def of TOOL_DEFS) {
       `${def.id}: handles=${handles.length} pointsNeeded=${def.pointsNeeded}`);
   });
 
-  test(`${def.id}: moveAll shifts every stored point in screen-space by (dx, dy)`, () => {
+  test(`${def.id}: moveAll shifts every stored point by exactly (dx, dy) on owned axes`, () => {
     const layer = makeLayer();
     const points = samplePoints(def.pointsNeeded);
     const d = makeDrawing(def.id, points);
     const before = d.points.map((p) => ({ ...p }));
     def.moveAll(d, 7, 5, layer);
+
+    // Which axes does this tool actually move? horizontal owns price only,
+    // vertical owns time only, everything else owns both.
+    const movesTime  = def.id !== "horizontal";
+    const movesPrice = def.id !== "vertical";
+
     for (let i = 0; i < def.pointsNeeded; i++) {
-      if (def.id !== "horizontal") {
-        assert.ok(
-          Math.abs((d.points[i].time - before[i].time) - 7) < 1e-9
-          || d.points[i].time === before[i].time,
-          `${def.id}: point ${i} time delta off`,
-        );
+      if (movesTime) {
+        assert.ok(Math.abs((d.points[i].time - before[i].time) - 7) < 1e-9,
+          `${def.id}: point ${i} time should move by +7 (was ${before[i].time}, now ${d.points[i].time})`);
+      } else {
+        assert.equal(d.points[i].time, before[i].time,
+          `${def.id}: point ${i} time should NOT move`);
       }
-      if (def.id !== "vertical") {
-        assert.ok(
-          Math.abs((d.points[i].price - before[i].price) - 5) < 1e-9
-          || d.points[i].price === before[i].price,
-          `${def.id}: point ${i} price delta off`,
-        );
+      if (movesPrice) {
+        assert.ok(Math.abs((d.points[i].price - before[i].price) - 5) < 1e-9,
+          `${def.id}: point ${i} price should move by +5 (was ${before[i].price}, now ${d.points[i].price})`);
+      } else {
+        assert.equal(d.points[i].price, before[i].price,
+          `${def.id}: point ${i} price should NOT move`);
       }
     }
   });
