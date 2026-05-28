@@ -123,3 +123,92 @@ def test_quote_breadth_returns_breadth_dict(client):
         r = client.get("/quote/breadth")
     assert r.status_code == 200
     assert r.get_json()["adv"] == 5
+
+
+# --- /history ------------------------------------------------------------------
+
+from data_source import Candle
+
+
+def test_history_success(client):
+    fake = MagicMock()
+    fake.get_history.return_value = [
+        Candle(time=1, open=1, high=2, low=0.5, close=1.5, volume=10),
+    ]
+    with patch.dict("app.REGISTRY", {"yfinance": fake}, clear=True):
+        r = client.get("/history?source=yfinance&symbol=AAPL&tf=1m&limit=10")
+    assert r.status_code == 200
+    body = r.get_json()
+    assert len(body) == 1 and body[0]["time"] == 1
+
+
+def test_history_unknown_source_returns_404(client):
+    with patch.dict("app.REGISTRY", {}, clear=True):
+        r = client.get("/history?source=nope&symbol=X&tf=1m")
+    assert r.status_code == 404
+    assert "error" in r.get_json()
+
+
+def test_history_source_raises_returns_500(client):
+    fake = MagicMock()
+    fake.get_history.side_effect = RuntimeError("network down")
+    with patch.dict("app.REGISTRY", {"yfinance": fake}, clear=True):
+        r = client.get("/history?source=yfinance&symbol=AAPL&tf=1m")
+    assert r.status_code == 500
+    assert r.get_json()["error"] == "network down"
+
+
+# --- /stream/quotes ------------------------------------------------------------
+
+from data_source import Quote
+
+
+def test_stream_quotes_unknown_source_returns_404(client):
+    with patch.dict("app.REGISTRY", {}, clear=True):
+        r = client.get("/stream/quotes?source=nope&symbol=X&tf=1m")
+    assert r.status_code == 404
+
+
+def test_stream_quotes_sse_headers_and_payload(client):
+    """Consume the generator directly. We don't keep the connection open."""
+    fake = MagicMock()
+    fake.stream_quotes.return_value = iter([
+        Quote(time=1, price=1.5, source="yfinance", symbol="AAPL"),
+        Quote(time=2, price=1.6, source="yfinance", symbol="AAPL"),
+    ])
+    with patch.dict("app.REGISTRY", {"yfinance": fake}, clear=True):
+        r = client.get("/stream/quotes?source=yfinance&symbol=AAPL&tf=1m")
+        assert r.status_code == 200
+        assert r.mimetype == "text/event-stream"
+        chunks = [c.decode() for c in r.response]
+    body = "".join(chunks)
+    assert body.startswith(": connected\n\n")
+    assert 'data: {' in body
+    assert '"price": 1.5' in body
+    assert '"price": 1.6' in body
+
+
+def test_stream_quotes_not_implemented_emits_error_event(client):
+    fake = MagicMock()
+    def gen(*_args, **_kwargs):
+        raise NotImplementedError("crypto streams in the browser")
+        yield  # pragma: no cover  (keeps it a generator)
+    fake.stream_quotes.side_effect = gen
+    with patch.dict("app.REGISTRY", {"hyperliquid": fake}, clear=True):
+        r = client.get("/stream/quotes?source=hyperliquid&symbol=BTC&tf=1m")
+        body = "".join(c.decode() for c in r.response)
+    assert "event: error" in body
+    assert "streaming not supported" in body
+
+
+def test_stream_quotes_generic_exception_emits_error_event(client):
+    fake = MagicMock()
+    def gen(*_args, **_kwargs):
+        raise RuntimeError("oops")
+        yield  # pragma: no cover
+    fake.stream_quotes.side_effect = gen
+    with patch.dict("app.REGISTRY", {"yfinance": fake}, clear=True):
+        r = client.get("/stream/quotes?source=yfinance&symbol=AAPL&tf=1m")
+        body = "".join(c.decode() for c in r.response)
+    assert "event: error" in body
+    assert "oops" in body
