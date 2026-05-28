@@ -148,6 +148,24 @@ Requirements: Python 3.10+ and an internet connection (for the Hyperliquid WS an
 
 ---
 
+## Tests
+
+Backend (pytest):
+
+```
+py -3 -m pytest
+```
+
+Frontend (pure-logic checks for indicators and drawings):
+
+```
+npm test
+```
+
+`npm test` runs Node's built-in `node --test` against `tests/frontend/test_*.js`. No `npm install` is needed — there are no dependencies (requires Node 18+).
+
+---
+
 ## Project layout
 
 ```
