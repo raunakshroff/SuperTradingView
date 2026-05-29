@@ -237,6 +237,49 @@ test("trendline: moveHandle(1) updates only point 1", () => {
   assert.equal(d.points[1].price, 888);
 });
 
+test("fib: hit on a retracement level line, miss far away", () => {
+  const def = TOOLS_BY_ID["fib"];
+  const layer = makeLayer();
+  // points: (time=100, price=100) and (time=300, price=200)
+  // priceHi=200, priceLo=100, range=100, xMin=100, xMax=300
+  // level 0.5 => price=150 => py=150; x=200 is within [100,300]
+  const d = makeDrawing("fib", [{ time: 100, price: 100 }, { time: 300, price: 200 }]);
+  assert.ok(def.hitTest(d, 200, 150, layer), "hit: on the 50% level line");
+  assert.ok(!def.hitTest(d, 780, 10, layer), "miss: far right and above all levels");
+});
+
+test("channel: hit on base or parallel segment, miss far away", () => {
+  const def = TOOLS_BY_ID["channel"];
+  const layer = makeLayer();
+  // A=(100,100), B=(300,200), C=(100,200)
+  // Base segment midpoint (200,150) has distance 0 from the segment
+  const d = makeDrawing("channel", [
+    { time: 100, price: 100 },
+    { time: 300, price: 200 },
+    { time: 100, price: 200 },
+  ]);
+  assert.ok(def.hitTest(d, 200, 150, layer), "hit: midpoint of base segment");
+  assert.ok(!def.hitTest(d, 780, 10, layer), "miss: far outside both segments");
+});
+
+test("arc: hit inside bounding box, miss far away", () => {
+  const def = TOOLS_BY_ID["arc"];
+  const layer = makeLayer();
+  // pa=(100,100), pb=(300,300): x in [94,306], yMin=100-50-6=44, yMax=306
+  const d = makeDrawing("arc", [{ time: 100, price: 100 }, { time: 300, price: 300 }]);
+  assert.ok(def.hitTest(d, 200, 200, layer), "hit: center of bounding box");
+  assert.ok(!def.hitTest(d, 780, 10, layer), "miss: far right and above");
+});
+
+test("ruler: hit inside bounding box, miss far away", () => {
+  const def = TOOLS_BY_ID["ruler"];
+  const layer = makeLayer();
+  // pa=(100,100), pb=(300,300): x in [96,304], y in [96,304]
+  const d = makeDrawing("ruler", [{ time: 100, price: 100 }, { time: 300, price: 300 }]);
+  assert.ok(def.hitTest(d, 200, 200, layer), "hit: center of bounding box");
+  assert.ok(!def.hitTest(d, 780, 10, layer), "miss: far right and above");
+});
+
 test("rectangle: moveHandle accepts string handleId (UI dataset path)", () => {
   const def = TOOLS_BY_ID["rectangle"];
   const layer = makeLayer();

@@ -71,6 +71,11 @@ for (const def of DEFS) {
   test(`${def.id}: compute(largeSeries) does not throw and returns plausible shape`, () => {
     const result = def.compute(makeCandles(300), defaultParams(def), defaultColors(def));
     assert.ok(isPlausibleShape(result));
+    // At n=300 with default params, every indicator should emit at least one point.
+    const nonEmpty = Array.isArray(result)
+      ? result.length > 0
+      : Object.values(result).some((v) => Array.isArray(v) && v.length > 0);
+    assert.ok(nonEmpty, `${def.id}: expected non-empty output for a 300-candle series`);
   });
 }
 
@@ -205,4 +210,16 @@ test("ma_cross: golden cross emitted when fast crosses above slow", () => {
   assert.ok(golden, "expected a Golden Cross marker");
   assert.equal(golden.color, colors.golden);
   assert.equal(golden.position, "belowBar");
+});
+
+test("ma_cross: death cross emitted when fast crosses below slow", () => {
+  const def = defById("ma_cross");
+  const closes = [100, 100, 100, 100, 100, 10, 10, 10, 10, 10];
+  const colors = defaultColors(def);
+  const result = def.compute(candlesFromCloses(closes),
+    { fast: 2, slow: 4, type: 0 }, colors);
+  const death = result.markers.find((m) => m.text === "Death");
+  assert.ok(death, "expected a Death Cross marker");
+  assert.equal(death.color, colors.death);
+  assert.equal(death.position, "aboveBar");
 });
