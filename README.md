@@ -1,6 +1,6 @@
 # SuperTradingView
 
-A local trading dashboard. Watch up to 8 live charts side-by-side, each with its own symbol, timeframe, and any combination of 33 technical indicators. Crypto streams in real time from Hyperliquid; stocks / ETFs / futures / FX stream from any ticker Yahoo Finance indexes via a Flask bridge over yfinance. Live symbol search across both. Built on Lightweight Charts v5 with native multi-pane support.
+A local trading dashboard. Watch up to 8 live charts side-by-side, each with its own symbol, timeframe, and any combination of 34 technical indicators. Crypto streams in real time from Hyperliquid; stocks / ETFs / futures / FX stream from any ticker Yahoo Finance indexes via a Flask bridge over yfinance. Live symbol search across both. Built on Lightweight Charts v5 with native multi-pane support.
 
 ![SuperTradingView dashboard](docs/screenshot.png)
 
@@ -14,9 +14,10 @@ A local trading dashboard. Watch up to 8 live charts side-by-side, each with its
   - **Hyperliquid** for crypto via the public WebSocket (`wss://api.hyperliquid.xyz/ws`), opened directly from the browser. Historical candles are proxied through Flask to avoid CORS.
   - **yfinance** for everything Yahoo Finance covers — NSE/BSE Indian equities, US equities, global ETFs, indices, futures, FX, even crypto pairs. Bridged into the browser via Server-Sent Events: Flask polls every 2 s and emits on price change.
 - **Pluggable data layer** — drop in Alpaca / Binance / Zerodha / Groww / Polygon by writing one class in [`data_source.py`](data_source.py) and adding it to the `REGISTRY`. No frontend changes needed.
-- **33 technical indicators** with custom params and per-line colours (see table below). Sub-pane indicators render in their own pane below the candles with their own price axis.
+- **34 technical indicators** with custom params and per-line colours (see table below). Sub-pane indicators render in their own pane below the candles with their own price axis.
 - **Multi-instance indicators** — add the same indicator multiple times with different parameters (e.g. SMA 20 + SMA 50 + SMA 200). Each instance is tracked independently with a `#N` badge when multiple copies are active.
 - **MA Crossover — Golden / Death Cross** — dedicated indicator plotting a fast MA and slow MA (SMA or EMA) with arrow markers at every crossover event.
+- **Chart Pattern Recognition** — automatically scans recent price action using pivot-point analysis and annotates the chart with labelled arrows (green = bullish, red = bearish) wherever a classic pattern is detected: Head & Shoulders, Inverse H&S, Double Top, Double Bottom, Ascending Triangle, Descending Triangle, Falling Wedge, Rising Wedge, and Cup & Handle. Three tunable params: lookback bars, pivot strength, and price-equality tolerance.
 - **Per-pane legend chips** in the top-left: indicator name + params + colour swatch + gear (opens modal scrolled to that indicator) + quick remove (×). Controls are hover-only to keep the chart clean.
 - **Live colour-coded ticker bar** in each pane header that flashes green or red on every price change.
 - **Live symbol search** — as you type in any symbol input, the dropdown queries the backend, which merges:
@@ -27,7 +28,7 @@ A local trading dashboard. Watch up to 8 live charts side-by-side, each with its
 
 ---
 
-## Technical Indicators (33 total)
+## Technical Indicators (34 total)
 
 | Category | Indicators |
 |---|---|
@@ -40,6 +41,33 @@ A local trading dashboard. Watch up to 8 live charts side-by-side, each with its
 | Volatility | ATR |
 | Volume | OBV, MFI, CMF, Volume |
 | Crossover | MA Crossover — Golden / Death Cross |
+| Pattern Recognition | Chart Patterns (H&S, Inv H&S, Dbl Top, Dbl Btm, Asc △, Desc △, Fall Wdg, Rise Wdg, Cup+Hdl) |
+
+### Chart Pattern Recognition
+
+Detects 9 classic patterns using pivot-point analysis and stamps arrow markers directly on the price chart — no separate pane needed.
+
+![Chart Patterns — H&S and Double Bottom markers on live chart](docs/chart-patterns-modal.png)
+
+| Marker | Pattern | Signal |
+|---|---|---|
+| `H&S` | Head & Shoulders | Bearish |
+| `Inv H&S` | Inverse Head & Shoulders | Bullish |
+| `Dbl Top` | Double Top | Bearish |
+| `Dbl Btm` | Double Bottom | Bullish |
+| `Asc △` | Ascending Triangle | Bullish |
+| `Desc △` | Descending Triangle | Bearish |
+| `Fall Wdg` | Falling Wedge | Bullish |
+| `Rise Wdg` | Rising Wedge | Bearish |
+| `Cup+Hdl` | Cup & Handle | Bullish |
+
+**Parameters** (all adjustable in the indicators modal):
+
+| Param | Default | Range | Effect |
+|---|---|---|---|
+| Lookback Bars | 200 | 50–500 | How far back to scan for patterns |
+| Pivot Strength | 5 | 2–20 | Bars each side required to confirm a swing high/low; higher = fewer, more significant pivots |
+| Tolerance % | 4 | 1–15 | How closely price levels must match (e.g. both tops in a Double Top); raise if seeing too few hits |
 
 ---
 

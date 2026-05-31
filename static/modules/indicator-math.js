@@ -68,6 +68,14 @@ export function ohlcLine(chart, color, paneIndex, extra) {
   return chart.addSeries(LightweightCharts.LineSeries, lineOpts(color, extra), paneIndex || 0);
 }
 
+// Like ohlcLine but attaches a LWC v5 markers plugin so apply() can call
+// s._markers.setMarkers(). LWC v5 removed series.setMarkers() from the series API.
+export function markerLine(chart, color, paneIndex, extra) {
+  const s = ohlcLine(chart, color, paneIndex, extra);
+  s._markers = LightweightCharts.createSeriesMarkers(s, []);
+  return s;
+}
+
 export function histSeries(chart, paneIndex, extra) {
   return chart.addSeries(LightweightCharts.HistogramSeries,
     Object.assign({ priceLineVisible: false }, extra || {}),
@@ -603,4 +611,155 @@ export function volumeBars(candles, upColor, dnColor) {
     value: c.volume || 0,
     color: c.close >= c.open ? upColor : dnColor,
   }));
+}
+
+// ── Chart Pattern Recognition ──────────────────────────────────────────────
+export function chartPatterns(candles, lookback, pivotStrength, tol, bullColor, bearColor) {
+  const n = candles.length;
+  if (n < 20) return { data: [], markers: [] };
+
+  const c = candles.slice(Math.max(0, n - lookback));
+  const str = Math.max(2, Math.floor(pivotStrength));
+
+  // Find pivot highs and lows; each pivot needs `str` higher/lower bars on both sides
+  const pH = [], pL = [];
+  for (let i = str; i < c.length - str; i++) {
+    let isH = true, isL = true;
+    for (let j = 1; j <= str; j++) {
+      if (c[i].high <= c[i - j].high || c[i].high <= c[i + j].high) isH = false;
+      if (c[i].low  >= c[i - j].low  || c[i].low  >= c[i + j].low)  isL = false;
+    }
+    if (isH) pH.push({ idx: i, p: c[i].high, time: c[i].time });
+    if (isL) pL.push({ idx: i, p: c[i].low,  time: c[i].time });
+  }
+
+  const markers = [];
+  const seen = new Set();
+
+  function mark(time, text, bull) {
+    if (seen.has(time)) return;
+    seen.add(time);
+    markers.push({
+      time,
+      text,
+      position: bull ? "belowBar" : "aboveBar",
+      shape:    bull ? "arrowUp"  : "arrowDown",
+      color:    bull ? bullColor  : bearColor,
+    });
+  }
+
+  // price equality within tolerance
+  function near(a, b) { return Math.abs(a - b) / ((a + b) / 2) < tol; }
+
+  // ── Head & Shoulders (bearish) ─────────────────────────────────────────
+  for (let i = 0; i + 2 < pH.length; i++) {
+    const [s1, hd, s2] = [pH[i], pH[i + 1], pH[i + 2]];
+    if (hd.p <= s1.p || hd.p <= s2.p) continue;
+    if (!near(s1.p, s2.p)) continue;
+    const n1 = pL.find(l => l.idx > s1.idx && l.idx < hd.idx);
+    const n2 = pL.find(l => l.idx > hd.idx && l.idx < s2.idx);
+    if (!n1 || !n2 || !near(n1.p, n2.p)) continue;
+    mark(s2.time, "H&S", false);
+  }
+
+  // ── Inverse Head & Shoulders (bullish) ────────────────────────────────
+  for (let i = 0; i + 2 < pL.length; i++) {
+    const [s1, hd, s2] = [pL[i], pL[i + 1], pL[i + 2]];
+    if (hd.p >= s1.p || hd.p >= s2.p) continue;
+    if (!near(s1.p, s2.p)) continue;
+    const n1 = pH.find(h => h.idx > s1.idx && h.idx < hd.idx);
+    const n2 = pH.find(h => h.idx > hd.idx && h.idx < s2.idx);
+    if (!n1 || !n2 || !near(n1.p, n2.p)) continue;
+    mark(s2.time, "Inv H&S", true);
+  }
+
+  // ── Double Top (bearish) ──────────────────────────────────────────────
+  for (let i = 0; i + 1 < pH.length; i++) {
+    const [t1, t2] = [pH[i], pH[i + 1]];
+    if (!near(t1.p, t2.p)) continue;
+    const trough = pL.find(l => l.idx > t1.idx && l.idx < t2.idx);
+    if (!trough || trough.p > t1.p * 0.97) continue;
+    mark(t2.time, "Dbl Top", false);
+  }
+
+  // ── Double Bottom (bullish) ───────────────────────────────────────────
+  for (let i = 0; i + 1 < pL.length; i++) {
+    const [b1, b2] = [pL[i], pL[i + 1]];
+    if (!near(b1.p, b2.p)) continue;
+    const peak = pH.find(h => h.idx > b1.idx && h.idx < b2.idx);
+    if (!peak || peak.p < b1.p * 1.03) continue;
+    mark(b2.time, "Dbl Btm", true);
+  }
+
+  // ── Ascending Triangle (bullish) ──────────────────────────────────────
+  // Flat resistance (near-equal pivot highs) + rising pivot lows
+  for (let i = 0; i + 1 < pH.length; i++) {
+    const [h1, h2] = [pH[i], pH[i + 1]];
+    if (!near(h1.p, h2.p)) continue;
+    const lBefore = pL.filter(l => l.idx < h1.idx).at(-1);
+    const lIn     = pL.filter(l => l.idx > h1.idx && l.idx < h2.idx).at(-1);
+    if (!lBefore || !lIn || lIn.p <= lBefore.p) continue;
+    mark(h2.time, "Asc △", true);
+  }
+
+  // ── Descending Triangle (bearish) ─────────────────────────────────────
+  // Flat support + falling pivot highs
+  for (let i = 0; i + 1 < pL.length; i++) {
+    const [l1, l2] = [pL[i], pL[i + 1]];
+    if (!near(l1.p, l2.p)) continue;
+    const hBefore = pH.filter(h => h.idx < l1.idx).at(-1);
+    const hIn     = pH.filter(h => h.idx > l1.idx && h.idx < l2.idx).at(-1);
+    if (!hBefore || !hIn || hIn.p >= hBefore.p) continue;
+    mark(l2.time, "Desc △", false);
+  }
+
+  // ── Falling Wedge (bullish) ───────────────────────────────────────────
+  // Both highs and lows descending, lows falling less steeply (converging)
+  for (let i = 0; i + 1 < pH.length; i++) {
+    const [h1, h2] = [pH[i], pH[i + 1]];
+    if (h2.p >= h1.p) continue;
+    const lBefore = pL.filter(l => l.idx < h1.idx).at(-1);
+    const lIn     = pL.filter(l => l.idx > h1.idx && l.idx < h2.idx).at(-1);
+    if (!lBefore || !lIn || lIn.p >= lBefore.p) continue;
+    const slopeH = (h2.p - h1.p) / (h2.idx - h1.idx);
+    const slopeL = (lIn.p - lBefore.p) / (lIn.idx - lBefore.idx);
+    if (slopeL <= slopeH) continue; // lows must fall less steeply
+    mark(h2.time, "Fall Wdg", true);
+  }
+
+  // ── Rising Wedge (bearish) ────────────────────────────────────────────
+  // Both highs and lows ascending, highs rising less steeply (converging)
+  for (let i = 0; i + 1 < pL.length; i++) {
+    const [l1, l2] = [pL[i], pL[i + 1]];
+    if (l2.p <= l1.p) continue;
+    const hBefore = pH.filter(h => h.idx < l1.idx).at(-1);
+    const hIn     = pH.filter(h => h.idx > l1.idx && h.idx < l2.idx).at(-1);
+    if (!hBefore || !hIn || hIn.p <= hBefore.p) continue;
+    const slopeL = (l2.p - l1.p) / (l2.idx - l1.idx);
+    const slopeH = (hIn.p - hBefore.p) / (hIn.idx - hBefore.idx);
+    if (slopeH >= slopeL) continue; // highs must rise less steeply
+    mark(l2.time, "Rise Wdg", false);
+  }
+
+  // ── Cup & Handle (bullish) ─────────────────────────────────────────────
+  // Two pivot highs (cup rims) at similar levels with a U-shaped trough,
+  // followed by a shallow handle dip after the second rim
+  for (let i = 0; i + 1 < pH.length; i++) {
+    const [rim1, rim2] = [pH[i], pH[i + 1]];
+    if (!near(rim1.p, rim2.p)) continue;
+    const cupLows = pL.filter(l => l.idx > rim1.idx && l.idx < rim2.idx);
+    if (cupLows.length === 0) continue;
+    const cup = cupLows.reduce((mn, l) => (l.p < mn.p ? l : mn));
+    const depth = (rim1.p - cup.p) / rim1.p;
+    if (depth < 0.08 || depth > 0.5) continue;
+    const handle = pL.find(l => l.idx > rim2.idx);
+    if (!handle) continue;
+    const hd = (rim2.p - handle.p) / rim2.p;
+    if (hd < 0.02 || hd > depth / 2) continue;
+    mark(handle.time, "Cup+Hdl", true);
+  }
+
+  markers.sort((a, b) => a.time - b.time);
+  const data = c.map(x => ({ time: x.time, value: x.close }));
+  return { data, markers };
 }
