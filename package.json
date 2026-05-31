@@ -1,0 +1,9 @@
+{
+  "name": "supertradingview-tests",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Frontend pure-logic tests (run with `npm test`).",
+  "scripts": {
+    "test": "node --test \"tests/frontend/test_*.js\""
+  }
+}
