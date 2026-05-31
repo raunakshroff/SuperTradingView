@@ -6,7 +6,8 @@ import { withAlpha, ohlcLine, histSeries,
          psar, supertrend, ichimoku,
          rsi, stochastic, stochRsi, williamsR, roc, cci,
          ao, ultimate, trix, dpo, cmo,
-         macd, adx, aroon, atr, obv, mfi, cmf, volumeBars }
+         macd, adx, aroon, atr, obv, mfi, cmf, volumeBars,
+         chartPatterns }
   from "./indicator-math.js";
 
 const PERIOD = (def, key, min = 2, max = 500, step) => {
@@ -439,6 +440,39 @@ export const DEFS = [
     apply: (s, d) => {
       s[0].setData(d.fast);
       s[1].setData(d.slow);
+      s[0].setMarkers(d.markers);
+    },
+  },
+
+  // ----- Pattern Recognition -----
+  {
+    id: "chartpatterns",
+    name: "Chart Patterns",
+    category: "Pattern Recognition",
+    overlay: true,
+    params: [
+      { key: "lookback", default: 200, min: 50,  max: 500, label: "Lookback Bars" },
+      { key: "strength", default: 5,   min: 2,   max: 20,  label: "Pivot Strength" },
+      { key: "tol",      default: 4,   min: 1,   max: 15,  step: 1, label: "Tolerance %" },
+    ],
+    colors: [
+      { key: "bullish", label: "Bullish",  default: "#26a69a" },
+      { key: "bearish", label: "Bearish",  default: "#ef5350" },
+      { key: "line",    label: "Ref Line", default: "#888888" },
+    ],
+    build: (chart, _s, col) => [
+      ohlcLine(chart, withAlpha(col.line, 0.15), 0, { lineWidth: 1 }),
+    ],
+    compute: (c, p, col) => chartPatterns(
+      c,
+      +p.lookback || 200,
+      +p.strength  || 5,
+      (+p.tol      || 4) / 100,
+      col.bullish,
+      col.bearish,
+    ),
+    apply: (s, d) => {
+      s[0].setData(d.data);
       s[0].setMarkers(d.markers);
     },
   },
