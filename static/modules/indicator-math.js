@@ -68,6 +68,14 @@ export function ohlcLine(chart, color, paneIndex, extra) {
   return chart.addSeries(LightweightCharts.LineSeries, lineOpts(color, extra), paneIndex || 0);
 }
 
+// Like ohlcLine but attaches a LWC v5 markers plugin so apply() can call
+// s._markers.setMarkers(). LWC v5 removed series.setMarkers() from the series API.
+export function markerLine(chart, color, paneIndex, extra) {
+  const s = ohlcLine(chart, color, paneIndex, extra);
+  s._markers = LightweightCharts.createSeriesMarkers(s, []);
+  return s;
+}
+
 export function histSeries(chart, paneIndex, extra) {
   return chart.addSeries(LightweightCharts.HistogramSeries,
     Object.assign({ priceLineVisible: false }, extra || {}),

@@ -1,6 +1,6 @@
 // DEFS array: one entry per indicator, wires math to chart series.
 
-import { withAlpha, ohlcLine, histSeries,
+import { withAlpha, ohlcLine, markerLine, histSeries,
          sma, ema, wma, hma, dema, tema,
          bbands, donchian, keltner, vwap,
          psar, supertrend, ichimoku,
@@ -403,7 +403,7 @@ export const DEFS = [
       { key: "death",  label: "Death Cross",  default: "#ff4422" },
     ],
     build: (chart, _s, col) => [
-      ohlcLine(chart, col.fast, 0, { lineWidth: 2 }),
+      markerLine(chart, col.fast, 0, { lineWidth: 2 }),
       ohlcLine(chart, col.slow, 0, { lineWidth: 2, lineStyle: 2 }),
     ],
     compute: (c, p, col) => {
@@ -440,7 +440,7 @@ export const DEFS = [
     apply: (s, d) => {
       s[0].setData(d.fast);
       s[1].setData(d.slow);
-      s[0].setMarkers(d.markers);
+      s[0]._markers.setMarkers(d.markers);
     },
   },
 
@@ -461,7 +461,7 @@ export const DEFS = [
       { key: "line",    label: "Ref Line", default: "#888888" },
     ],
     build: (chart, _s, col) => [
-      ohlcLine(chart, withAlpha(col.line, 0.15), 0, { lineWidth: 1 }),
+      markerLine(chart, withAlpha(col.line, 0.15), 0, { lineWidth: 1 }),
     ],
     compute: (c, p, col) => chartPatterns(
       c,
@@ -473,7 +473,7 @@ export const DEFS = [
     ),
     apply: (s, d) => {
       s[0].setData(d.data);
-      s[0].setMarkers(d.markers);
+      s[0]._markers.setMarkers(d.markers);
     },
   },
 ];

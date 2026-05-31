@@ -47,7 +47,7 @@ A local trading dashboard. Watch up to 8 live charts side-by-side, each with its
 
 Detects 9 classic patterns using pivot-point analysis and stamps arrow markers directly on the price chart — no separate pane needed.
 
-![Chart Patterns modal — Pattern Recognition category](docs/chart-patterns-modal.png)
+![Chart Patterns — H&S and Double Bottom markers on live chart](docs/chart-patterns-modal.png)
 
 | Marker | Pattern | Signal |
 |---|---|---|
