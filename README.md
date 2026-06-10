@@ -178,23 +178,61 @@ Then open <http://127.0.0.1:5173>.
 
 Requirements: Python 3.10+ and an internet connection (for the Hyperliquid WS and yfinance HTTP calls). The Lightweight Charts library is loaded from a CDN.
 
+Optional: export `ANTHROPIC_API_KEY` before starting to enable the LLM copilot (`⌘ J`). Everything else works without it.
+
+Run the backend test suite with:
+
+```bash
+pytest
+```
+
+To regenerate the README screenshots (`docs/*.png`):
+
+```bash
+pip install playwright && python -m playwright install chromium
+python scripts/capture_screenshots.py
+```
+
 ---
 
 ## Project layout
 
 ```
 SuperTradingView/
-├── app.py              # Flask app: /, /sources, /symbols, /history, /stream/quotes (SSE)
-├── data_source.py      # DataSource ABC + HyperliquidSource + YFinanceSource + REGISTRY
-├── symbols.json        # Curated quick-load list; live search supplements via Hyperliquid + Yahoo
-├── requirements.txt    # flask, yfinance, requests
+├── app.py                   # Flask routes: static, symbols, history, SSE quotes, copilot, rail data
+├── data_source.py           # DataSource ABC + HyperliquidSource + YFinanceSource + REGISTRY
+├── services/                # Server-side analytics, cached with stale-while-revalidate
+│   ├── _cache.py            #   thread-safe in-process TTL cache
+│   ├── breadth.py           #   advancers/decliners + VIX + US10Y for the bottom dock
+│   ├── copilot.py           #   LLM copilot: market-context builder + Claude streaming
+│   ├── events.py            #   macro calendar (events.json) + yfinance earnings dates
+│   ├── factors.py           #   cross-sectional factor z-scores over factor_universe.json
+│   ├── narratives.py        #   curated narrative themes (narratives.json)
+│   ├── news.py              #   RSS news tape (Yahoo / Reuters / MarketWatch)
+│   ├── sectors.py           #   sector lookup with on-disk cache
+│   └── signals.py           #   trend-break / hidden-divergence / 20d-break scanner
+├── tests/services/          # pytest suite for the services layer
+├── scripts/
+│   └── capture_screenshots.py  # regenerates docs/*.png via Playwright
+├── symbols.json             # curated quick-load list; live search supplements it
+├── narratives.json · events.json · factor_universe.json
+├── requirements.txt
 └── static/
-    ├── index.html      # Topbar, grid, pane template, indicators modal, style modal, settings popover
-    ├── style.css       # Dark theme, grid layout, modal, legend chips, flash animations
-    ├── indicators.js   # 33 indicator defs with build / compute / apply per indicator
-    ├── drawings.js     # 9 drawing tool defs + DrawingLayer + DrawingStore + StyleModal + SettingsPopover
-    ├── drawings.css    # Toolbar, handles, mini-toolbar, style modal, settings popover
-    └── app.js          # Pane class, HL WS multiplexer, SSE client, modal, legends, debounced symbol search
+    ├── index.html           # workspace shell, pane template, modals, copilot overlay
+    ├── style.css · drawings.css
+    ├── main.js              # entry point: boots grid, rails, dock, copilot bindings
+    ├── utils.js             # fetchJSON, withAlpha
+    ├── indicators.js · drawings.js   # thin re-export shims over static/modules/
+    └── modules/             # ES modules
+        ├── pane.js                # Pane class: chart, history load, SSE/WS subscribe, ticker
+        ├── grid.js · constants.js # layout presets, pane lifecycle, persisted state
+        ├── indicator-defs.js      # 34 indicator defs (build / compute / apply)
+        ├── indicator-math.js · indicator-manager.js · indicators-modal.js
+        ├── drawing-tools.js · drawing-layer.js · drawing-store.js
+        ├── hyperliquid-ws.js      # single WS multiplexer shared by all crypto panes
+        ├── ai-insight.js          # deterministic insight panel + ask-copilot modal
+        ├── rail.js · news.js · events.js · factors.js · signals.js
+        └── dock.js · topbar.js · command-palette.js · personality.js · symbols.js
 ```
 
 ---
@@ -207,9 +245,15 @@ SuperTradingView/
 | `GET` | `/sources` | `[{name, asset_class}]` — registered data sources |
 | `GET` | `/symbols` | Curated symbol list + supported timeframes |
 | `GET` | `/symbols?q=...` | Live search merging curated + every source's `search_symbols(q)` |
-| `GET` | `/history?source=...&symbol=...&tf=...&limit=500` | OHLCV array from the named source |
+| `GET` | `/history?source=...&symbol=...&tf=...&limit=500` | OHLCV array from the named source (`limit` clamped to 1-5000) |
 | `GET` | `/stream/quotes?source=...&symbol=...&tf=...` | SSE stream of `{time, price}` ticks |
 | `POST` | `/copilot` | `{question, source, symbol, tf}` → streamed plain-text LLM answer grounded in recent candles (needs `ANTHROPIC_API_KEY`) |
+| `GET` | `/narratives` | Curated narrative themes from `narratives.json` |
+| `GET` | `/news` | Latest 10 RSS headlines, cached 5 min |
+| `GET` | `/events?symbols=A,B` | Macro calendar + per-symbol earnings dates for the next 7 days |
+| `GET` | `/factors` | Factor-pulse z-scores over the universe, cached 30 min |
+| `GET` | `/signals` | Top-5 live signals (trend break / hidden div / 20d break), cached 60 s |
+| `GET` | `/quote/breadth` | `{adv, dec, us10y, vix}` for the bottom dock, cached 60 s |
 
 ---
 
@@ -263,12 +307,14 @@ The modal, chart wiring, persistence, sub-pane layout, legend chip, multi-instan
 
 ## Architecture notes
 
-- **Frontend is a single page with no framework** — `static/app.js` is ~900 lines of vanilla JS organised around a `Pane` class. One chart instance per pane.
+- **Frontend is a single page with no framework and no build step** — vanilla-JS ES modules under `static/modules/`, booted by `static/main.js`. One chart instance per pane, organised around the `Pane` class.
 - **Hyperliquid WebSocket multiplexer** — a single WS connection feeds every crypto pane via a callback registry, with exponential-backoff reconnect (1 s → 30 s cap).
 - **yfinance over SSE** — `stream_quotes()` is a Python generator polled every 2 s; the browser patches the in-memory candle array via `EventSource`.
+- **Services layer with stale-while-revalidate caching** — news / events / factors / signals / breadth each live in one module under `services/`, sharing a thread-safe TTL cache (`services/_cache.py`). A stale value is served instantly while one background thread recomputes, so slow yfinance scans never block a request after first warm-up.
 - **Lightweight Charts v5 multi-pane** — sub-pane indicators are added via `chart.addSeries(LineSeries, opts, paneIndex)` with proportional `setStretchFactor`.
 - **Indicator instance keys** — first instance uses bare `defId` (e.g. `"sma"`) for backward compat with persisted state; subsequent instances append `~<timestamp>` (e.g. `"sma~1716200000000"`).
-- **State persistence** — `stv.chartCount` and `stv.panes` in `localStorage`. Per-pane state shape: `{ source, symbol, tf, indicators: { [key]: { ...params, colors: { [slot]: hex } } } }`.
+- **State persistence** — `stv.layoutId`, `stv.panes`, `stv.theme`, `stv.personality`, and `stv.drawingPrefs` in `localStorage`. Per-pane state shape: `{ source, symbol, tf, indicators: { [key]: { ...params, colors: { [slot]: hex } } } }`. Legacy `stv.chartCount` is migrated to `stv.layoutId` on first load.
+- **Tests** — `pytest` covers the services layer (cache semantics, signal math, factor math, feed parsing) with yfinance/feedparser mocked; frontend testing is manual.
 
 ---
 
