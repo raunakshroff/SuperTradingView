@@ -3,7 +3,7 @@
 import { panes, paneStates, setLayoutId } from "./grid.js";
 
 export const PERSONALITY_DEFAULTS = {
-  Minimalist: { layoutId: 1, syms: [{ source: "yfinance", symbol: "NVDA" }], tf: "1D" },
+  Minimalist: { layoutId: 1, syms: [{ source: "yfinance", symbol: "NVDA" }], tf: "1d" },
   Quant:      { layoutId: 5, syms: [
     { source: "yfinance", symbol: "SPY"  },
     { source: "yfinance", symbol: "NVDA" },
@@ -20,7 +20,7 @@ export const PERSONALITY_DEFAULTS = {
     { source: "yfinance", symbol: "SPY" },
     { source: "yfinance", symbol: "TLT" },
     { source: "yfinance", symbol: "GLD" },
-  ], tf: "1D" },
+  ], tf: "1d" },
 };
 
 const LS_PERSONALITY = "stv.personality";

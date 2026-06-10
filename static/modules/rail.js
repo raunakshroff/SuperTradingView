@@ -41,7 +41,7 @@ function renderNarrativesChips() {
   }
 }
 
-export async function getHistoryCached(source, symbol, tf = "1D") {
+export async function getHistoryCached(source, symbol, tf = "1d") {
   const key = `${source}|${symbol}|${tf}`;
   const hit  = RAIL_STATE.histCache.get(key);
   if (hit && Date.now() - hit.ts < 5 * 60 * 1000) return hit.candles;
@@ -76,9 +76,9 @@ async function renderNarrativesList() {
   if (!narr) { wrap.innerHTML = '<div class="card-empty">No narratives.</div>'; return; }
   wrap.innerHTML = '<div class="card-empty">Loading…</div>';
   const rows = await Promise.all(narr.symbols.map(async (s) => {
-    const candles = await getHistoryCached(s.source, s.symbol, "1D");
+    const candles = await getHistoryCached(s.source, s.symbol, "1d");
     if (candles.length < 2) return { sym: s.symbol, source: s.source, last: null, chg: 0, closes: [] };
-    const closes = candles.map((c) => c.c);
+    const closes = candles.map((c) => c.close);
     const last   = closes[closes.length - 1];
     const prev   = closes[closes.length - 2];
     const chg    = prev ? ((last - prev) / prev) * 100 : 0;

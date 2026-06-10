@@ -24,6 +24,7 @@ from services.events import list_events
 from services.factors import factors_cached
 from services.signals import signals_cached
 from services.breadth import breadth_cached
+from services.copilot import CopilotUnavailable, build_context, stream_answer
 from services.narratives import list_narratives
 from services.news import fetch_news
 
@@ -207,6 +208,43 @@ def stream_quotes():
             "X-Accel-Buffering": "no",
             "Connection": "keep-alive",
         },
+    )
+
+
+# --- Copilot (LLM Q&A) ----------------------------------------------------------
+
+@app.route("/copilot", methods=["POST"])
+def copilot():
+    body = request.get_json(silent=True) or {}
+    question = (body.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "question is required"}), 400
+
+    source_name = body.get("source") or ""
+    symbol = body.get("symbol") or ""
+    tf = body.get("tf") or "1d"
+
+    candles: list[dict] = []
+    try:
+        src = get_source(source_name)
+        candles = [c.to_dict() for c in src.get_history(symbol, tf, 200)]
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        # Answer from an empty context rather than failing the whole request
+        log.warning("copilot history fetch failed for %s/%s: %s: %s",
+                    source_name, symbol, type(e).__name__, e)
+
+    context = build_context(symbol, source_name, tf, candles)
+    try:
+        gen = stream_answer(question, context)
+    except CopilotUnavailable as e:
+        return jsonify({"error": str(e)}), 503
+
+    return Response(
+        gen,
+        mimetype="text/plain",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
