@@ -11,11 +11,14 @@ in later (replace the dict + file with a Redis hash).
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from pathlib import Path
 from typing import Iterable
 
 import yfinance as yf
+
+log = logging.getLogger(__name__)
 
 
 class SectorLookup:
@@ -40,7 +43,8 @@ class SectorLookup:
         try:
             info = yf.Ticker(symbol).info
             sector = info.get("sector") if isinstance(info, dict) else None
-        except Exception:
+        except Exception as e:
+            log.warning("sector lookup failed for %s: %s: %s", symbol, type(e).__name__, e)
             sector = None
         sector = sector if isinstance(sector, str) and sector else "Unknown"
         with self._lock:

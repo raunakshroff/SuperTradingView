@@ -7,6 +7,7 @@ yfinance.Ticker(sym).calendar. Returns next 7 days, sorted asc.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -14,6 +15,8 @@ from typing import Any, Iterable
 import yfinance as yf
 
 from services._cache import TTLCache
+
+log = logging.getLogger(__name__)
 
 _earnings_cache = TTLCache(ttl_seconds=3600)
 
@@ -55,7 +58,8 @@ def _earnings_for(sym: str) -> datetime | None:
                     if isinstance(d, datetime):
                         return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
             return None
-        except Exception:
+        except Exception as e:
+            log.warning("earnings date fetch failed for %s: %s: %s", sym, type(e).__name__, e)
             return None
 
     return _earnings_cache.get_or_compute(f"earn:{sym}", _compute, stale_ok=True)

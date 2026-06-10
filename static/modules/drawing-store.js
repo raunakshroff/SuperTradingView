@@ -69,5 +69,10 @@ export const PrefsStore = {
 };
 
 export const util = {
-  newId() { return "drw_" + Math.random().toString(36).slice(2, 10); },
+  newId() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return "drw_" + crypto.randomUUID();
+    }
+    return "drw_" + Math.random().toString(36).slice(2, 10);
+  },
 };

@@ -20,12 +20,15 @@ Cached 30 minutes server-side with stale-while-revalidate.
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import Callable
 
 import yfinance as yf
 
 from services._cache import TTLCache
+
+log = logging.getLogger(__name__)
 
 _cache = TTLCache(ttl_seconds=30 * 60)
 _LOOKBACK_DAYS = 260
@@ -119,7 +122,8 @@ def fetch_closes(symbol: str, lookback: int = _LOOKBACK_DAYS) -> list[float] | N
         hist = yf.Ticker(symbol).history(period="2y", interval="1d")
         closes = [float(c) for c in hist["Close"].tolist() if c is not None and not math.isnan(float(c))]
         return closes[-lookback:] if len(closes) >= lookback else closes
-    except Exception:
+    except Exception as e:
+        log.warning("close fetch failed for %s: %s: %s", symbol, type(e).__name__, e)
         return None
 
 
@@ -127,7 +131,8 @@ def fetch_info(symbol: str) -> dict:
     try:
         info = yf.Ticker(symbol).info
         return info if isinstance(info, dict) else {}
-    except Exception:
+    except Exception as e:
+        log.warning("info fetch failed for %s: %s: %s", symbol, type(e).__name__, e)
         return {}
 
 

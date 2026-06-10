@@ -7,6 +7,7 @@ avoid CORS issues, and serves the static frontend.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -25,6 +26,8 @@ from services.signals import signals_cached
 from services.breadth import breadth_cached
 from services.narratives import list_narratives
 from services.news import fetch_news
+
+log = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -99,8 +102,9 @@ def symbols():
         try:
             for s in src.search_symbols(q):
                 add(s)
-        except Exception:
+        except Exception as e:
             # Don't let one broken source kill the response
+            log.warning("symbol search failed for source %s: %s: %s", src.name, type(e).__name__, e)
             continue
 
     return jsonify({"symbols": merged[:50], "timeframes": TIMEFRAMES})
@@ -145,7 +149,11 @@ def history():
     source_name = request.args.get("source", "")
     symbol = request.args.get("symbol", "")
     tf = request.args.get("tf", "1m")
-    limit = int(request.args.get("limit", "500"))
+    try:
+        limit = int(request.args.get("limit", "500"))
+    except ValueError:
+        return jsonify({"error": "limit must be an integer"}), 400
+    limit = max(1, min(limit, 5000))
     try:
         src = get_source(source_name)
         candles = src.get_history(symbol, tf, limit)
@@ -153,6 +161,8 @@ def history():
     except KeyError as e:
         return jsonify({"error": str(e)}), 404
     except Exception as e:
+        log.warning("history fetch failed for %s/%s tf=%s: %s: %s",
+                    source_name, symbol, tf, type(e).__name__, e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -203,6 +213,10 @@ def stream_quotes():
 # --- Main ----------------------------------------------------------------------
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     port = int(os.environ.get("PORT", "5173"))
     # threaded=True so SSE connections don't block other requests
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)

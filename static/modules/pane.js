@@ -213,7 +213,7 @@ export class Pane {
 
     let histFailed = false;
     try {
-      await this._loadHistory();
+      await this._loadHistory(gen);
     } catch {
       histFailed = true;
     }
@@ -237,11 +237,14 @@ export class Pane {
     }
   }
 
-  async _loadHistory() {
+  async _loadHistory(gen) {
     const url = `/history?source=${encodeURIComponent(this.state.source)}`
               + `&symbol=${encodeURIComponent(this.state.symbol)}`
               + `&tf=${encodeURIComponent(this.state.tf)}&limit=500`;
     const data = await fetchJSON(url);
+    // A newer subscribe() may have started while we awaited; don't let a
+    // stale response overwrite its candles/series.
+    if (gen !== undefined && gen !== this._subGen) return;
     if (!Array.isArray(data) || data.length === 0) return;
     this.candles = data.map((c) => ({
       time: c.time, open: c.open, high: c.high, low: c.low, close: c.close,
