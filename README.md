@@ -142,9 +142,13 @@ real portfolio backend lands.
   thereafter.
 - **AI insight:** *deterministic* — derived from the active pane's history
   (regime via 200-SMA, vol-cluster detection, hidden RSI divergence,
-  OBV-trended flow proxy). The `Ask copilot` button and `⌘K` shortcut are
-  placeholders for a future LLM-backed palette; they show a "coming soon"
-  toast today.
+  OBV-trended flow proxy).
+- **Ask copilot:** LLM-backed Q&A about the active pane (the `Ask copilot`
+  button or `⌘ J`). The backend builds a compact context block from the
+  pane's recent candles (last close, bar-over-bar changes, RSI, SMA50/200,
+  raw recent OHLCV) and streams a Claude answer from `POST /copilot`.
+  Requires `ANTHROPIC_API_KEY` in the server environment; without it the
+  endpoint returns a clear 503 and the modal shows the reason.
 - **Events:** `events.json` is a hand-curated calendar of macro events for the
   next 7 days; per-symbol earnings dates come from yfinance and are cached
   one hour per ticker.
@@ -205,6 +209,7 @@ SuperTradingView/
 | `GET` | `/symbols?q=...` | Live search merging curated + every source's `search_symbols(q)` |
 | `GET` | `/history?source=...&symbol=...&tf=...&limit=500` | OHLCV array from the named source |
 | `GET` | `/stream/quotes?source=...&symbol=...&tf=...` | SSE stream of `{time, price}` ticks |
+| `POST` | `/copilot` | `{question, source, symbol, tf}` → streamed plain-text LLM answer grounded in recent candles (needs `ANTHROPIC_API_KEY`) |
 
 ---
 

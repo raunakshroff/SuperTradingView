@@ -1392,3 +1392,94 @@ html, body {
   color: var(--ink-soft);
 }
 .cmd-palette-foot .kbd { margin: 0 2px; }
+
+/* --- Copilot modal ----------------------------------------------------------- */
+
+.copilot-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 14vh;
+}
+.copilot-modal[hidden] { display: none; }
+.copilot-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+[data-theme="light"] .copilot-backdrop {
+  background: rgba(0,0,0,0.18);
+}
+.copilot-panel {
+  position: relative;
+  width: min(560px, 92vw);
+  max-height: 64vh;
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lift);
+  overflow: hidden;
+}
+.copilot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-faint);
+}
+.copilot-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.copilot-answer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  border-bottom: 1px solid var(--line-faint);
+}
+.copilot-answer[hidden] { display: none; }
+.copilot-answer.thinking { color: var(--ink-soft); font-style: italic; }
+.copilot-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.copilot-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  min-width: 0;
+}
+.copilot-input::placeholder { color: var(--ink-soft); }
+.copilot-send {
+  flex-shrink: 0;
+  background: var(--acid-soft);
+  color: var(--acid);
+  border: 1px solid var(--acid);
+  border-radius: var(--r-sm);
+  padding: 5px 14px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.copilot-send:disabled { opacity: 0.5; cursor: default; }

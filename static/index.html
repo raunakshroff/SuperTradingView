@@ -187,6 +187,24 @@
     </div>
   </div>
 
+  <!-- Copilot overlay -->
+  <div id="copilot-modal" class="copilot-modal" hidden>
+    <div class="copilot-backdrop" data-copilot-close></div>
+    <div class="copilot-panel glass" role="dialog" aria-label="Ask copilot">
+      <div class="copilot-head">
+        <span class="copilot-title">Copilot · <span id="copilot-symbol" class="mono">—</span></span>
+        <span class="copilot-hint kbd">esc</span>
+      </div>
+      <div class="copilot-answer" id="copilot-answer" hidden></div>
+      <form id="copilot-form" class="copilot-form">
+        <input type="text" id="copilot-input" class="copilot-input"
+               placeholder="Ask about this chart… e.g. is the trend intact?"
+               autocomplete="off" spellcheck="false" />
+        <button type="submit" id="copilot-send" class="copilot-send">Ask</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Pane template — cloned for each chart slot -->
   <template id="pane-template">
     <section class="pane">

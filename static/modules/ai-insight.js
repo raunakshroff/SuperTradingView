@@ -1,4 +1,5 @@
-// AI Copilot insight panel: deterministic regime detection, no LLM.
+// AI Copilot: deterministic regime-detection insight panel, plus an LLM-backed
+// ask-anything modal streamed from POST /copilot.
 
 import { getHistoryCached } from "./rail.js";
 import { panes }            from "./grid.js";
@@ -73,7 +74,7 @@ function _renderInsight(symbol, candles) {
     return;
   }
 
-  const closes  = candles.map((c) => c.c);
+  const closes  = candles.map((c) => c.close);
   const last    = closes[closes.length - 1];
   const smaSer  = _sma200Series(closes);
   const sma200  = smaSer[closes.length - 1];
@@ -147,16 +148,95 @@ function _renderInsight(symbol, candles) {
 export async function refreshAIInsight() {
   if (!panes[0] || !panes[0].state) return;
   const { source, symbol } = panes[0].state;
-  const candles = await getHistoryCached(source, symbol, "1D");
+  const candles = await getHistoryCached(source, symbol, "1d");
   _renderInsight(symbol, candles);
 }
 
+// --- Ask-copilot modal (streams from POST /copilot) ---------------------------
+
+let _streaming = false;
+
+function _openCopilot() {
+  const modal = document.getElementById("copilot-modal");
+  const symEl = document.getElementById("copilot-symbol");
+  const input = document.getElementById("copilot-input");
+  if (!modal) return;
+  if (symEl && panes[0]?.state) symEl.textContent = panes[0].state.symbol;
+  modal.hidden = false;
+  input?.focus();
+}
+
+function _closeCopilot() {
+  const modal = document.getElementById("copilot-modal");
+  if (modal) modal.hidden = true;
+}
+
+async function _askCopilot(question) {
+  const answerEl = document.getElementById("copilot-answer");
+  const sendBtn  = document.getElementById("copilot-send");
+  if (!answerEl || _streaming) return;
+  const state = panes[0]?.state;
+  if (!state) return;
+
+  _streaming = true;
+  if (sendBtn) sendBtn.disabled = true;
+  answerEl.hidden = false;
+  answerEl.classList.add("thinking");
+  answerEl.textContent = "Thinking…";
+
+  try {
+    const resp = await fetch("/copilot", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        question,
+        source: state.source,
+        symbol: state.symbol,
+        tf:     state.tf,
+      }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      answerEl.textContent = err.error || `Copilot request failed (${resp.status})`;
+      return;
+    }
+    answerEl.classList.remove("thinking");
+    answerEl.textContent = "";
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      answerEl.textContent += decoder.decode(value, { stream: true });
+      answerEl.scrollTop = answerEl.scrollHeight;
+    }
+    if (!answerEl.textContent) answerEl.textContent = "(no answer)";
+  } catch (e) {
+    console.warn("copilot request failed", e);
+    answerEl.textContent = "Copilot request failed — check the server logs.";
+  } finally {
+    answerEl.classList.remove("thinking");
+    _streaming = false;
+    if (sendBtn) sendBtn.disabled = false;
+  }
+}
+
 export function bindAIInsight() {
-  document.getElementById("ai-ask")?.addEventListener("click", () => showToast("Copilot coming soon"));
+  document.getElementById("ai-ask")?.addEventListener("click", _openCopilot);
   document.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
       e.preventDefault();
-      showToast("Copilot coming soon");
+      _openCopilot();
     }
+    if (e.key === "Escape") _closeCopilot();
+  });
+  document.querySelector("[data-copilot-close]")?.addEventListener("click", _closeCopilot);
+  document.getElementById("copilot-form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = document.getElementById("copilot-input");
+    const q = (input?.value || "").trim();
+    if (!q) return;
+    if (_streaming) { showToast("Copilot is still answering"); return; }
+    _askCopilot(q);
   });
 }
