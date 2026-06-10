@@ -7,6 +7,7 @@ contribution rather than 500.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 from urllib.parse import urlparse
@@ -14,6 +15,8 @@ from urllib.parse import urlparse
 import feedparser
 
 from services._cache import TTLCache
+
+log = logging.getLogger(__name__)
 
 FEEDS = [
     "https://finance.yahoo.com/rss/topstories",
@@ -61,7 +64,8 @@ def fetch_news() -> list[dict[str, Any]]:
                 host = urlparse(url).netloc
                 for e in getattr(parsed, "entries", [])[:8]:
                     items.append(_entry_to_item(e, host))
-            except Exception:
+            except Exception as e:
+                log.warning("feed fetch failed for %s: %s: %s", url, type(e).__name__, e)
                 continue
         items.sort(key=lambda x: x.get("ts_epoch", 0), reverse=True)
         return items[:10]

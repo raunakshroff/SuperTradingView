@@ -3,19 +3,23 @@
 Three signal types per symbol:
   - Trend break: close crosses 200-SMA after 20+ bars on the wrong side
   - Hidden divergence: price/RSI HH-LL pattern on last 20 bars
-  - Liquidity sweep + reclaim: wick beyond 20d high/low, body closes back inside
+  - 20d range break: close beyond the prior 20d high/low by more than 1%
+    (close-only data; a true wick-based sweep+reclaim would need OHLC)
 
 Returns top 5 signals by absolute sigma score. Cached 60s.
 """
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import Any
 
 import yfinance as yf
 
 from services._cache import TTLCache
+
+log = logging.getLogger(__name__)
 
 _cache = TTLCache(ttl_seconds=60)
 
@@ -89,7 +93,8 @@ def fetch_closes(symbol: str) -> list[float] | None:
         hist = yf.Ticker(symbol).history(period="1y", interval="1d")
         closes = [float(c) for c in hist["Close"].tolist() if c is not None and not math.isnan(float(c))]
         return closes if len(closes) >= 200 else None
-    except Exception:
+    except Exception as e:
+        log.warning("close fetch failed for %s: %s: %s", symbol, type(e).__name__, e)
         return None
 
 
@@ -133,15 +138,16 @@ def _signals_for_symbol(symbol: str, closes: list[float]) -> list[dict[str, Any]
             if all(r is not None for r in r_his) and hidden_bear_div(p_his, r_his):
                 out.append({"symbol": symbol, "side": "short", "message": "Hidden bear div · 4H", "sigma": -1.3})
 
-    # 3. Liquidity sweep + reclaim (close-only approximation)
+    # 3. 20d range break (close-only; we don't have wick data here, so this is
+    #    a breakout/breakdown signal, not a sweep+reclaim)
     window20 = closes[-21:-1]  # excluding latest
     if window20:
         hi20 = max(window20)
         lo20 = min(window20)
         if closes[-1] > hi20 * 1.01:
-            out.append({"symbol": symbol, "side": "long", "message": "Liq sweep · reclaim", "sigma": 2.1})
+            out.append({"symbol": symbol, "side": "long", "message": "20d breakout · new high", "sigma": 2.1})
         elif closes[-1] < lo20 * 0.99:
-            out.append({"symbol": symbol, "side": "short", "message": "Liq break · breakdown", "sigma": -2.1})
+            out.append({"symbol": symbol, "side": "short", "message": "20d breakdown · new low", "sigma": -2.1})
 
     return out
 

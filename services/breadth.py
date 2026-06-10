@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import Any
 
 import yfinance as yf
 
 from services._cache import TTLCache
+
+log = logging.getLogger(__name__)
 
 _cache = TTLCache(ttl_seconds=60)
 
@@ -17,7 +20,8 @@ def fetch_last_two(symbol: str) -> list[float] | None:
         hist = yf.Ticker(symbol).history(period="5d", interval="1d")
         closes = [float(c) for c in hist["Close"].tolist() if c is not None and not math.isnan(float(c))]
         return closes[-2:] if len(closes) >= 2 else None
-    except Exception:
+    except Exception as e:
+        log.warning("close fetch failed for %s: %s: %s", symbol, type(e).__name__, e)
         return None
 
 

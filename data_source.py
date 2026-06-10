@@ -9,12 +9,15 @@ The Flask routes and frontend will pick it up automatically.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from typing import Iterator
 
 import requests
+
+log = logging.getLogger(__name__)
 
 
 # --- Wire types ---------------------------------------------------------------
@@ -126,8 +129,9 @@ class HyperliquidSource(DataSource):
             r.raise_for_status()
             HyperliquidSource._universe_cache = r.json().get("universe", []) or []
             HyperliquidSource._universe_cache_at = now
-        except Exception:
+        except Exception as e:
             # Keep stale cache rather than wiping it on a transient failure
+            log.warning("Hyperliquid universe fetch failed: %s: %s", type(e).__name__, e)
             if self._universe_cache is None:
                 HyperliquidSource._universe_cache = []
         return self._universe_cache or []
@@ -219,9 +223,9 @@ class YFinanceSource(DataSource):
                     # SSE keepalive comment so the client knows we're alive
                     yield Quote(time=now, price=last_price or 0.0, source=self.name, symbol=symbol)
                     last_keepalive = time.time()
-            except Exception:
+            except Exception as e:
                 # swallow transient errors; the client stays connected
-                pass
+                log.warning("quote poll failed for %s: %s: %s", symbol, type(e).__name__, e)
             time.sleep(2)
 
     # Map Yahoo quoteType -> our asset_class
@@ -259,7 +263,8 @@ class YFinanceSource(DataSource):
                 timeout=15,
             )
             quotes = getattr(res, "quotes", None) or []
-        except Exception:
+        except Exception as e:
+            log.warning("yfinance search failed for %r: %s: %s", q, type(e).__name__, e)
             return []
 
         out: list[dict] = []
